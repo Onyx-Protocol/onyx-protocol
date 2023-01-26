@@ -1,0 +1,231 @@
+-- Tests setting XCN (borrow/supply) speeds work properly
+-- Ensures setting various XCN speeds doesn't break the XCN distribution mechanisms
+-- Note: Ensuring the right amounts of XCN distributed is out of scope of these scenario tests (this is in the scope of flywheel scenario tests)
+
+Macro FlywheelComptroller price=1.0 xcnInitAmount=5000000e18
+    Unitroller Deploy
+    PriceOracle Deploy Fixed price
+    PriceOracleProxy Deploy Admin (PriceOracle Address) (Address Zero) (Address Zero) (Address Zero) (Address Zero) (Address Zero)
+    -- Deploy Comptroller
+    ComptrollerImpl Deploy Scenario ComptrollerScen
+    Unitroller SetPendingImpl ComptrollerScen
+    ComptrollerImpl ComptrollerScen Become
+    -- Configure Comptroller
+    Comptroller SetPriceOracle (PriceOracleProxy Address)
+    Comptroller SetCloseFactor 0.5
+    Comptroller LiquidationIncentive 1.1
+    -- Add markets
+    NewOToken ZRX oZRX
+    NewOToken BAT oBAT
+    Support oZRX collateralFactor:0.5
+    Support oBAT collateralFactor:0.5
+    -- Setup XCN token
+    Erc20 Deploy Standard XCN "XCN Token" 18
+    Give (Address Comptroller) xcnInitAmount XCN
+    Comptroller Send "setXcnAddress(address)" (Address XCN)
+
+Macro InitUsage
+    Prep Geoff 100e18 ZRX oZRX
+    Mint Geoff 50e18 oZRX--tokenbalance = 50e18 / 2e9 = 2.5e10
+    Prep Coburn Some BAT oBAT
+    Mint Coburn 6e18 oBAT--tokenbalance = 6e18 / 2e9 = 3e9
+    EnterMarkets Coburn oBAT
+    Borrow Coburn 1e18 oZRX
+
+Macro UseEnvironment1
+    FlywheelComptroller
+    InitUsage
+
+Macro ClaimXcnForAll
+    Comptroller ClaimXcn Geoff
+    Comptroller ClaimXcn Coburn
+
+Macro VerifyXcnSpeeds oToken supplySpeed borrowSpeed
+    Assert Equal (Comptroller XcnSupplySpeed oToken) supplySpeed
+    Assert Equal (Comptroller XcnBorrowSpeed oToken) borrowSpeed
+
+Macro SetAndVerifyXcnSpeeds oToken supplySpeed borrowSpeed
+    Comptroller SetXcnSpeeds (oToken) ((Number supplySpeed)) ((Number borrowSpeed))
+    VerifyXcnSpeeds oToken supplySpeed borrowSpeed
+    MineBlock -- Ensures we accrue XCN
+    ClaimXcnForAll -- Ensures setting the XCN speeds didn't break the distribution mechanisms
+
+Test "XCN supply speed can be set"
+    UseEnvironment1
+    SetAndVerifyXcnSpeeds oZRX 2e18 0e18
+
+Test "XCN supply speed can be set then unset"
+    UseEnvironment1
+    SetAndVerifyXcnSpeeds oZRX 2e18 0e18
+    SetAndVerifyXcnSpeeds oZRX 0e18 0e18
+
+Test "XCN supply speed can be set then set again"
+    UseEnvironment1
+    SetAndVerifyXcnSpeeds oZRX 2e18 0e18
+    SetAndVerifyXcnSpeeds oZRX 0e18 0e18
+    SetAndVerifyXcnSpeeds oZRX 2e18 0e18
+
+Test "XCN supply speed can be set w/ borrow speed"
+    UseEnvironment1
+    SetAndVerifyXcnSpeeds oZRX 2e18 1e18
+
+Test "XCN supply speed can be set then unset w/ borrow speed"
+    UseEnvironment1
+    SetAndVerifyXcnSpeeds oZRX 2e18 1e18
+    SetAndVerifyXcnSpeeds oZRX 0e18 1e18
+
+Test "XCN supply speed can be set then set, unset, and set again w/ borrow speed"
+    UseEnvironment1
+    SetAndVerifyXcnSpeeds oZRX 2e18 1e18
+    SetAndVerifyXcnSpeeds oZRX 0e18 1e18
+    SetAndVerifyXcnSpeeds oZRX 2e18 1e18
+
+Test "XCN borrow speed can be set"
+    UseEnvironment1
+    SetAndVerifyXcnSpeeds oZRX 0e18 2e18
+
+Test "XCN borrow speed can be set then unset"
+    UseEnvironment1
+    SetAndVerifyXcnSpeeds oZRX 0e18 2e18
+    SetAndVerifyXcnSpeeds oZRX 0e18 0e18
+
+Test "XCN borrow speed can be set then set again"
+    UseEnvironment1
+    SetAndVerifyXcnSpeeds oZRX 0e18 2e18
+    SetAndVerifyXcnSpeeds oZRX 0e18 0e18
+    SetAndVerifyXcnSpeeds oZRX 0e18 2e18
+
+Test "XCN borrow speed can be set w/ supply speed"
+    UseEnvironment1
+    SetAndVerifyXcnSpeeds oZRX 1e18 2e18
+
+Test "XCN borrow speed can be set then unset w/ supply speed"
+    UseEnvironment1
+    SetAndVerifyXcnSpeeds oZRX 1e18 2e18
+    SetAndVerifyXcnSpeeds oZRX 1e18 0e18
+
+Test "XCN borrow speed can be set then set, unset, and set again w/ supply speed"
+    UseEnvironment1
+    SetAndVerifyXcnSpeeds oZRX 1e18 2e18
+    SetAndVerifyXcnSpeeds oZRX 1e18 0e18
+    SetAndVerifyXcnSpeeds oZRX 1e18 2e18
+
+Test "Many different XCN supply speeds can be set"
+    UseEnvironment1
+    SetAndVerifyXcnSpeeds oZRX 2e18 0e18
+    SetAndVerifyXcnSpeeds oBAT 3e18 0e18
+    VerifyXcnSpeeds oZRX 2e18 0e18 -- Ensure these speeds weren't changed
+
+Test "Many different XCN supply speeds can be set then unset"
+    UseEnvironment1
+    SetAndVerifyXcnSpeeds oZRX 2e18 0e18
+    SetAndVerifyXcnSpeeds oBAT 3e18 0e18
+    VerifyXcnSpeeds oZRX 2e18 0e18 -- Ensure these speeds weren't changed
+    SetAndVerifyXcnSpeeds oBAT 0e18 0e18
+    VerifyXcnSpeeds oZRX 2e18 0e18 -- Ensure these speeds weren't changed
+    SetAndVerifyXcnSpeeds oZRX 0e18 0e18
+    VerifyXcnSpeeds oBAT 0e18 0e18 -- Ensure these speeds weren't changed
+
+Test "Many different XCN supply speeds can be set, unset, and set again"
+    UseEnvironment1
+    SetAndVerifyXcnSpeeds oZRX 2e18 0e18
+    SetAndVerifyXcnSpeeds oBAT 3e18 0e18
+    VerifyXcnSpeeds oZRX 2e18 0e18 -- Ensure these speeds weren't changed
+    SetAndVerifyXcnSpeeds oBAT 0e18 0e18
+    VerifyXcnSpeeds oZRX 2e18 0e18 -- Ensure these speeds weren't changed
+    SetAndVerifyXcnSpeeds oZRX 0e18 0e18
+    VerifyXcnSpeeds oBAT 0e18 0e18 -- Ensure these speeds weren't changed
+    SetAndVerifyXcnSpeeds oZRX 5e18 0e18
+    VerifyXcnSpeeds oBAT 0e18 0e18 -- Ensure these speeds weren't changed
+    SetAndVerifyXcnSpeeds oBAT 6e18 0e18
+    VerifyXcnSpeeds oZRX 5e18 0e18 -- Ensure these speeds weren't changed
+
+Test "Many different XCN supply speeds can be set w/ borrow speeds"
+    UseEnvironment1
+    SetAndVerifyXcnSpeeds oZRX 2e18 1e18
+    SetAndVerifyXcnSpeeds oBAT 3e18 1e18
+    VerifyXcnSpeeds oZRX 2e18 1e18 -- Ensure these speeds weren't changed
+
+Test "Many different XCN supply speeds can be set then unset w/ borrow speeds"
+    UseEnvironment1
+    SetAndVerifyXcnSpeeds oZRX 2e18 1e18
+    SetAndVerifyXcnSpeeds oBAT 3e18 1e18
+    VerifyXcnSpeeds oZRX 2e18 1e18 -- Ensure these speeds weren't changed
+    SetAndVerifyXcnSpeeds oBAT 0e18 1e18
+    VerifyXcnSpeeds oZRX 2e18 1e18 -- Ensure these speeds weren't changed
+    SetAndVerifyXcnSpeeds oZRX 0e18 1e18
+    VerifyXcnSpeeds oBAT 0e18 1e18 -- Ensure these speeds weren't changed
+
+Test "Many different XCN supply speeds can be set, unset, and set again w/ borrow speeds"
+    UseEnvironment1
+    SetAndVerifyXcnSpeeds oZRX 2e18 1e18
+    SetAndVerifyXcnSpeeds oBAT 3e18 1e18
+    VerifyXcnSpeeds oZRX 2e18 1e18 -- Ensure these speeds weren't changed
+    SetAndVerifyXcnSpeeds oBAT 0e18 1e18
+    VerifyXcnSpeeds oZRX 2e18 1e18 -- Ensure these speeds weren't changed
+    SetAndVerifyXcnSpeeds oZRX 0e18 1e18
+    VerifyXcnSpeeds oBAT 0e18 1e18 -- Ensure these speeds weren't changed
+    SetAndVerifyXcnSpeeds oZRX 5e18 1e18
+    VerifyXcnSpeeds oBAT 0e18 1e18 -- Ensure these speeds weren't changed
+    SetAndVerifyXcnSpeeds oBAT 6e18 1e18
+    VerifyXcnSpeeds oZRX 5e18 1e18 -- Ensure these speeds weren't changed
+
+Test "Many different XCN borrow speeds can be set"
+    UseEnvironment1
+    SetAndVerifyXcnSpeeds oZRX 0e18 2e18
+    SetAndVerifyXcnSpeeds oBAT 0e18 3e18
+    VerifyXcnSpeeds oZRX 0e18 2e18 -- Ensure these speeds weren't changed
+
+Test "Many different XCN borrow speeds can be set then unset"
+    UseEnvironment1
+    SetAndVerifyXcnSpeeds oZRX 0e18 2e18
+    SetAndVerifyXcnSpeeds oBAT 0e18 3e18
+    VerifyXcnSpeeds oZRX 0e18 2e18 -- Ensure these speeds weren't changed
+    SetAndVerifyXcnSpeeds oBAT 0e18 0e18
+    VerifyXcnSpeeds oZRX 0e18 2e18 -- Ensure these speeds weren't changed
+    SetAndVerifyXcnSpeeds oZRX 0e18 0e18
+    VerifyXcnSpeeds oBAT 0e18 0e18 -- Ensure these speeds weren't changed
+
+Test "Many different XCN borrow speeds can be set, unset, and set again"
+    UseEnvironment1
+    SetAndVerifyXcnSpeeds oZRX 0e18 2e18
+    SetAndVerifyXcnSpeeds oBAT 0e18 3e18
+    VerifyXcnSpeeds oZRX 0e18 2e18 -- Ensure these speeds weren't changed
+    SetAndVerifyXcnSpeeds oBAT 0e18 0e18
+    VerifyXcnSpeeds oZRX 0e18 2e18 -- Ensure these speeds weren't changed
+    SetAndVerifyXcnSpeeds oZRX 0e18 0e18
+    VerifyXcnSpeeds oBAT 0e18 0e18 -- Ensure these speeds weren't changed
+    SetAndVerifyXcnSpeeds oZRX 0e18 5e18
+    VerifyXcnSpeeds oBAT 0e18 0e18 -- Ensure these speeds weren't changed
+    SetAndVerifyXcnSpeeds oBAT 0e18 6e18
+    VerifyXcnSpeeds oZRX 0e18 5e18 -- Ensure these speeds weren't changed
+
+Test "Many different XCN borrow speeds can be set w/ supply speeds"
+    UseEnvironment1
+    SetAndVerifyXcnSpeeds oZRX 1e18 2e18
+    SetAndVerifyXcnSpeeds oBAT 1e18 3e18
+    VerifyXcnSpeeds oZRX 1e18 2e18 -- Ensure these speeds weren't changed
+
+Test "Many different XCN borrow speeds can be set then unset w/ supply speeds"
+    UseEnvironment1
+    SetAndVerifyXcnSpeeds oZRX 1e18 2e18
+    SetAndVerifyXcnSpeeds oBAT 1e18 3e18
+    VerifyXcnSpeeds oZRX 1e18 2e18 -- Ensure these speeds weren't changed
+    SetAndVerifyXcnSpeeds oBAT 1e18 0e18
+    VerifyXcnSpeeds oZRX 1e18 2e18 -- Ensure these speeds weren't changed
+    SetAndVerifyXcnSpeeds oZRX 1e18 0e18
+    VerifyXcnSpeeds oBAT 1e18 0e18 -- Ensure these speeds weren't changed
+
+Test "Many different XCN borrow speeds can be set, unset, and set again w/ supply speeds"
+    UseEnvironment1
+    SetAndVerifyXcnSpeeds oZRX 1e18 2e18
+    SetAndVerifyXcnSpeeds oBAT 1e18 3e18
+    VerifyXcnSpeeds oZRX 1e18 2e18 -- Ensure these speeds weren't changed
+    SetAndVerifyXcnSpeeds oBAT 1e18 0e18
+    VerifyXcnSpeeds oZRX 1e18 2e18 -- Ensure these speeds weren't changed
+    SetAndVerifyXcnSpeeds oZRX 1e18 0e18
+    VerifyXcnSpeeds oBAT 1e18 0e18 -- Ensure these speeds weren't changed
+    SetAndVerifyXcnSpeeds oZRX 1e18 5e18
+    VerifyXcnSpeeds oBAT 1e18 0e18 -- Ensure these speeds weren't changed
+    SetAndVerifyXcnSpeeds oBAT 1e18 6e18
+    VerifyXcnSpeeds oZRX 1e18 5e18 -- Ensure these speeds weren't changed

@@ -1,0 +1,63 @@
+
+Test "Borrow some WBTC enters WBTC and succeeds when not entered"
+    Invariant Success
+    NewComptroller price:1.0
+    NewOToken ZRX oZRX
+    NewOToken WBTC oWBTC tokenType:WBTC
+    Give oWBTC 10e8 WBTC -- Faucet some WBTC to borrow
+    Support oZRX collateralFactor:0.5
+    Support oWBTC collateralFactor:0.5
+    Prep Geoff Some ZRX oZRX
+    Mint Geoff 100e18 oZRX
+    EnterMarkets Geoff oZRX
+    Borrow Geoff 1e8 oWBTC
+    Assert Equal (oToken oWBTC BorrowBalance Geoff) (Exactly 1e8)
+    Assert Equal (Erc20 WBTC TokenBalance Geoff) (Exactly 1e8)
+    Assert Equal (Erc20 WBTC TokenBalance oWBTC) (Exactly 9e8)
+
+Test "Borrow some WBTC fails when no WBTC available"
+    NewComptroller price:1.0
+    NewOToken ZRX oZRX
+    NewOToken WBTC oWBTC tokenType:WBTC
+    Support oZRX collateralFactor:0.5
+    Support oWBTC collateralFactor:0.5
+    Prep Geoff Some ZRX oZRX
+    Mint Geoff 100e18 oZRX
+    EnterMarkets Geoff oZRX oWBTC
+    Invariant Static (OToken oZRX ExchangeRateStored)
+    AllowFailures
+    Borrow Geoff 1e8 oWBTC
+    Assert Failure TOKEN_INSUFFICIENT_CASH BORROW_CASH_NOT_AVAILABLE
+
+Test "Borrow some WBTC fails when WBTC paused"
+    NewComptroller price:1.0
+    NewOToken ZRX oZRX
+    NewOToken WBTC oWBTC tokenType:WBTC
+    Give oWBTC 10e8 WBTC -- Faucet some WBTC to borrow
+    Support oZRX collateralFactor:0.5
+    Support oWBTC collateralFactor:0.5
+    Prep Geoff Some ZRX oZRX
+    Mint Geoff 100e18 oZRX
+    EnterMarkets Geoff oZRX oWBTC
+    Invariant Static (OToken oZRX ExchangeRateStored)
+    Erc20 WBTC Pause
+    AllowFailures
+    Borrow Geoff 1e8 oWBTC
+    Assert Revert
+
+Test "Borrow some WBTC from Excess Cash"
+    Invariant Success
+    NewComptroller price:1.0
+    NewOToken ZRX oZRX
+    NewOToken WBTC oWBTC tokenType:WBTC
+    Give oWBTC 10e8 WBTC -- Faucet some WBTC to borrow
+    Support oZRX collateralFactor:0.5
+    Support oWBTC collateralFactor:0.5
+    Prep Geoff Some ZRX oZRX
+    Mint Geoff 100e18 oZRX
+    EnterMarkets Geoff oZRX oWBTC
+    Borrow Geoff 1e8 oWBTC
+    EnterMarkets Geoff oZRX oWBTC
+    Assert Equal (oToken oWBTC BorrowBalance Geoff) (Exactly 1e8)
+    Assert Equal (Erc20 WBTC TokenBalance Geoff) (Exactly 1e8)
+    Assert Equal (Erc20 WBTC TokenBalance oWBTC) (Exactly 9e8)

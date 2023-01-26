@@ -1,0 +1,59 @@
+#!/usr/bin/env yarn run repl -s
+-- Deploys basic ComptrollerG3
+
+Unitroller Deploy
+PriceOracle Deploy Fixed 1.0
+PriceOracleProxy Deploy Admin (PriceOracle Address) (Address Zero) (Address Zero) (Address Zero) (Address Zero) (Address Zero)
+----g2
+ComptrollerImpl Deploy ScenarioG2 ComptrollerScenG2
+Unitroller SetPendingImpl ComptrollerScenG2
+ComptrollerImpl ComptrollerScenG2 BecomeG2
+--list some tokens
+Comptroller SetPriceOracle (PriceOracleProxy Address)
+Comptroller SetMaxAssets 20
+Comptroller SetCloseFactor 0.5
+Comptroller LiquidationIncentive 1.1
+NewOToken ZRX oZRX
+NewOToken BAT oBAT
+Support oZRX collateralFactor:0.5
+Support oBAT collateralFactor:0.5
+-- final
+ComptrollerImpl Deploy Scenario ComptrollerScen
+Unitroller SetPendingImpl ComptrollerScen
+
+Prep Geoff 100e18 ZRX oZRX
+Mint Geoff 50e18 oZRX--tokenbalance = 50e18 / 2e9 = 2.5e10
+
+Prep Fourth Some BAT oBAT
+Mint Fourth 6e18 oBAT
+EnterMarkets Fourth oBAT
+Borrow Fourth 1e18 oZRX
+
+Prep Fifth Some BAT oBAT
+Mint Fifth 6e18 oBAT
+EnterMarkets Fifth oBAT
+Borrow Fifth 1e18 oZRX
+
+Prep Sixth Some BAT oBAT
+Mint Sixth 6e18 oBAT
+EnterMarkets Sixth oBAT
+Borrow Sixth 1e18 oZRX
+
+Prep Seventh Some BAT oBAT
+Mint Seventh 6e18 oBAT
+EnterMarkets Seventh oBAT
+Borrow Seventh 1e18 oZRX
+
+ComptrollerImpl ComptrollerScen Become 1e18 [oZRX oBAT]
+Erc20 Deploy Standard XCN "XCN Token" 18
+Give (Address Comptroller) 5000000e18 XCN
+Comptroller Send "setXcnAddress(address)" (Address XCN)
+
+Comptroller RefreshXcnSpeeds
+
+FastForward 300000 Blocks
+Read (Comptroller Address)
+Read (Address Fourth)
+Read (Address Fifth)
+Read (Address Sixth)
+Read (Address Seventh)

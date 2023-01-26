@@ -1,0 +1,105 @@
+-- Mint Tests
+
+Test "Mint 1 oZRX"
+    NewComptroller
+    ListedOToken ZRX oZRX initialExchangeRate:1e9
+    Prep Geoff Some ZRX oZRX
+    Mint Geoff 50e18 oZRX
+    Assert Equal (Erc20 oZRX TokenBalance Geoff) (Exactly 50e9)
+    -- Assert Equal (OToken oZRX UnderlyingBalance Geoff) (Exactly 1.0e18)
+
+Test "Mint with insufficient allowance"
+    NewComptroller
+    ListedOToken ZRX oZRX initialExchangeRate:1e9
+    Prep Geoff 50e18 ZRX oZRX allowanceAmount:49e18
+    AllowFailures
+    Mint Geoff 50e18 oZRX
+    Assert Revert "revert Insufficient allowance"
+    Assert Equal (Erc20 oZRX TokenBalance Geoff) (Exactly 0e9)
+
+Test "Mint with insufficient balance"
+    NewComptroller
+    ListedOToken ZRX oZRX initialExchangeRate:1e9
+    Prep Geoff 49e18 ZRX oZRX allowanceAmount:50e18
+    AllowFailures
+    Mint Geoff 50e18 oZRX
+    Assert Revert "revert Insufficient balance"
+    Assert Equal (Erc20 oZRX TokenBalance Geoff) (Exactly 0e9)
+
+Test "Mint two ZRX after minting two ZRX, and then I mint two more"
+    NewComptroller
+    ListedOToken ZRX oZRX initialExchangeRate:1e9
+    Prep Geoff Some ZRX oZRX
+    Mint Geoff 2e18 oZRX
+    Assert Equal (Erc20 oZRX TokenBalance Geoff) (Exactly 2e9)
+    Assert Equal (Erc20 oZRX TotalSupply) (Exactly 2e9)
+    Mint Geoff 2e18 oZRX
+    Assert Equal (Erc20 oZRX TokenBalance Geoff) (Exactly 4e9)
+    Assert Equal (Erc20 oZRX TotalSupply) (Exactly 4e9)
+    Mint Geoff 2e18 oZRX
+    Assert Equal (Erc20 oZRX TokenBalance Geoff) (Exactly 6e9)
+    Assert Equal (Erc20 oZRX TotalSupply) (Exactly 6e9)
+
+Test "Two users Mint"
+    NewComptroller
+    ListedOToken ZRX oZRX initialExchangeRate:1e9
+    Prep Geoff Some ZRX oZRX
+    Prep Torrey Some ZRX oZRX
+    Mint Geoff 2e18 oZRX
+    Assert Equal (Erc20 oZRX TokenBalance Geoff) (Exactly 2e9)
+    Assert Equal (Erc20 oZRX TotalSupply) (Exactly 2e9)
+    Mint Torrey 2e18 oZRX
+    Assert Equal (Erc20 oZRX TokenBalance Geoff) (Exactly 2e9)
+    Assert Equal (Erc20 oZRX TokenBalance Torrey) (Exactly 2e9)
+    Assert Equal (Erc20 oZRX TotalSupply) (Exactly 4e9)
+
+Test "Mint accrues no interest without borrows"
+    NewComptroller
+    ListedOToken ZRX oZRX initialExchangeRate:1e9
+    Prep Geoff Some ZRX oZRX
+    Prep Torrey Some ZRX oZRX
+    Mint Geoff 2e18 oZRX
+    Assert Equal (Erc20 oZRX TokenBalance Geoff) (Exactly 2e9)
+    Assert Equal (Erc20 oZRX TotalSupply) (Exactly 2e9)
+    FastForward 1000 Blocks
+    Assert Equal (Erc20 oZRX TokenBalance Geoff) (Exactly 2e9)
+    Assert Equal (Erc20 oZRX TotalSupply) (Exactly 2e9)
+
+Test "Mint transfer in fails"
+    NewComptroller
+    ListedOToken EVL cEVL tokenType:Evil
+    Prep Geoff Some EVL cEVL
+    Prep Torrey Some EVL cEVL
+    Invariant Static (Erc20 cEVL TokenBalance Geoff)
+    Invariant Static (Erc20 cEVL TotalSupply)
+    Invariant Static (Erc20 EVL TotalSupply)
+    AllowFailures
+    Mint Geoff 2e18 cEVL
+    Assert Revert "revert TOKEN_TRANSFER_IN_FAILED"
+
+Test "Denied by comptroller because unlisted"
+    NewComptroller
+    NewOToken ZRX oZRX
+    Prep Geoff Some ZRX oZRX
+    Prep Torrey Some ZRX oZRX
+    Invariant Static (Erc20 oZRX TokenBalance Geoff)
+    Invariant Static (Erc20 oZRX TotalSupply)
+    Invariant Static (Erc20 ZRX TotalSupply)
+    AllowFailures
+    Mint Geoff 2e18 oZRX
+    Assert Failure COMPTROLLER_REJECTION MINT_COMPTROLLER_REJECTION MARKET_NOT_LISTED
+
+Test "mint reverts if mint is paused"
+    NewComptroller
+    ListedOToken ZRX oZRX
+    Prep Geoff Some ZRX oZRX
+    Prep Torrey Some ZRX oZRX
+    Invariant Static (Erc20 oZRX TokenBalance Geoff)
+    Invariant Static (Erc20 oZRX TotalSupply)
+    Invariant Static (Erc20 ZRX TotalSupply)
+    Comptroller SetPauseGuardian Coburn
+    From Coburn (Comptroller SetGuardianMarketPaused oZRX "Mint" True)
+    AllowFailures
+    Mint Geoff 2e18 oZRX
+    Assert Revert "revert mint is paused"
+    Comptroller SetGuardianMarketPaused oZRX "Mint" False

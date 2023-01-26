@@ -1,0 +1,11 @@
+-- Delegate upgrade tests
+
+Test "Change the delegate"
+    NewComptroller
+    NewOToken DEL cDEL
+    Support cDEL collateralFactor:0.5
+    Prep Jared Some DEL cDEL
+    Mint Jared 100e18 cDEL
+    OTokenDelegate Deploy OErc20Delegate oErc20Delegate2
+    OToken cDEL SetImplementation (OTokenDelegate oErc20Delegate2 Address) True "0x0"
+    Redeem Jared 50e9 cDEL

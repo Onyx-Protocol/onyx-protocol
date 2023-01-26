@@ -1,0 +1,43 @@
+
+Test "Set admin"
+    NewComptroller
+    NewOToken ZRX oZRX
+    Assert Equal (OToken oZRX Admin) (Address Root)
+    Assert Equal (OToken oZRX PendingAdmin) (Address Zero)
+    From Root (OToken oZRX SetPendingAdmin Geoff)
+    Assert Equal (OToken oZRX Admin) (Address Root)
+    Assert Equal (OToken oZRX PendingAdmin) (Address Geoff)
+    From Geoff (OToken oZRX AcceptAdmin)
+    Assert Equal (OToken oZRX Admin) (Address Geoff)
+    Assert Equal (OToken oZRX PendingAdmin) (Address Zero)
+
+Test "Set admin to contructor argument"
+    NewComptroller
+    NewOToken ZRX oZRX admin:Torrey
+    Assert Equal (OToken oZRX Admin) (Address Torrey)
+    Assert Equal (OToken oZRX PendingAdmin) (Address Zero)
+    From Torrey (OToken oZRX SetPendingAdmin Geoff)
+    Assert Equal (OToken oZRX Admin) (Address Torrey)
+    Assert Equal (OToken oZRX PendingAdmin) (Address Geoff)
+    From Geoff (OToken oZRX AcceptAdmin)
+    Assert Equal (OToken oZRX Admin) (Address Geoff)
+    Assert Equal (OToken oZRX PendingAdmin) (Address Zero)
+
+
+Test "Fail to set pending admin"
+    NewComptroller
+    NewOToken ZRX oZRX
+    Invariant Remains (OToken oZRX Admin) (Address Root)
+    Invariant Remains (OToken oZRX PendingAdmin) (Address Zero)
+    AllowFailures
+    From Geoff (OToken oZRX SetPendingAdmin Geoff)
+    Assert Failure UNAUTHORIZED SET_PENDING_ADMIN_OWNER_CHECK
+
+Test "Fail to accept admin"
+    NewComptroller
+    NewOToken ZRX oZRX
+    Invariant Remains (OToken oZRX Admin) (Address Root)
+    Invariant Remains (OToken oZRX PendingAdmin) (Address Zero)
+    AllowFailures
+    From Geoff (OToken oZRX AcceptAdmin)
+    Assert Failure UNAUTHORIZED ACCEPT_ADMIN_PENDING_ADMIN_CHECK

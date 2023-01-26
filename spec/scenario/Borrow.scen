@@ -1,0 +1,103 @@
+
+Test "Borrow some BAT and enters BAT if BAT not entered"
+    NewComptroller price:1.0
+    NewOToken ZRX oZRX
+    NewOToken BAT oBAT
+    Give oBAT 10e18 BAT -- Faucet some bat to borrow
+    Support oZRX collateralFactor:0.5
+    Support oBAT collateralFactor:0.5
+    Prep Geoff Some ZRX oZRX
+    Mint Geoff 100e18 oZRX
+    EnterMarkets Geoff oZRX
+    Borrow Geoff 1e18 oBAT
+    Assert Equal (oToken oBAT BorrowBalance Geoff) (Exactly 1e18)
+    Assert Equal (Erc20 BAT TokenBalance Geoff) (Exactly 1e18)
+    Assert Equal (Erc20 BAT TokenBalance oBAT) (Exactly 9e18)
+    Assert Equal (Comptroller MembershipLength Geoff) (Exactly 2)
+    Assert True (Comptroller CheckMembership Geoff oZRX)
+    Assert True (Comptroller CheckMembership Geoff oBAT)
+
+Test "Borrow some BAT fails, but user still entered"
+    NewComptroller price:1.0
+    NewOToken ZRX oZRX
+    NewOToken BAT oBAT
+    Support oZRX collateralFactor:0.5
+    Support oBAT collateralFactor:0.5
+    Prep Geoff Some ZRX oZRX
+    Mint Geoff 100e18 oZRX
+    EnterMarkets Geoff oZRX
+    Invariant Static (Erc20 BAT TokenBalance Geoff)
+    Invariant Static (Erc20 BAT TokenBalance oBAT)
+    AllowFailures
+    Borrow Geoff 1e18 oBAT
+    Assert Failure TOKEN_INSUFFICIENT_CASH BORROW_CASH_NOT_AVAILABLE
+    Assert Equal (Comptroller MembershipLength Geoff) (Exactly 2)
+    Assert True (Comptroller CheckMembership Geoff oZRX)
+    Assert True (Comptroller CheckMembership Geoff oBAT)
+
+Test "Borrow some BAT fails when no BAT available"
+    NewComptroller price:1.0
+    NewOToken ZRX oZRX
+    NewOToken BAT oBAT
+    Support oZRX collateralFactor:0.5
+    Support oBAT collateralFactor:0.5
+    Prep Geoff Some ZRX oZRX
+    Mint Geoff 100e18 oZRX
+    EnterMarkets Geoff oZRX oBAT
+    Invariant Static (OToken oZRX ExchangeRateStored)
+    AllowFailures
+    Borrow Geoff 1e18 oBAT
+    Assert Failure TOKEN_INSUFFICIENT_CASH BORROW_CASH_NOT_AVAILABLE
+
+Test "Borrow fails if market not listed"
+    NewComptroller price:1.0
+    NewOToken ZRX oZRX
+    NewOToken BAT oBAT
+    Give oBAT 10e18 BAT -- Faucet some bat to borrow
+    Support oZRX collateralFactor:0.5
+    Prep Geoff Some ZRX oZRX
+    Mint Geoff 100e18 oZRX
+    EnterMarkets Geoff oZRX
+    AllowFailures
+    Borrow Geoff 1e18 oBAT
+    Assert Failure COMPTROLLER_REJECTION BORROW_COMPTROLLER_REJECTION MARKET_NOT_LISTED
+
+Test "Borrow some BAT from Excess Cash"
+    Invariant Success
+    NewComptroller price:1.0
+    NewOToken ZRX oZRX
+    NewOToken BAT oBAT
+    Give oBAT 10e18 BAT -- Faucet some bat to borrow
+    Support oZRX collateralFactor:0.5
+    Support oBAT collateralFactor:0.5
+    Prep Geoff Some ZRX oZRX
+    Mint Geoff 100e18 oZRX
+    EnterMarkets Geoff oZRX oBAT
+    Borrow Geoff 1e18 oBAT
+    Assert Equal (oToken oBAT BorrowBalance Geoff) (Exactly 1e18)
+    Assert Equal (Erc20 BAT TokenBalance Geoff) (Exactly 1e18)
+    Assert Equal (Erc20 BAT TokenBalance oBAT) (Exactly 9e18)
+
+Test "Borrow some BAT reverts if borrow is paused"
+    NewComptroller price:1.0
+    Comptroller SetPauseGuardian Coburn
+    NewOToken ZRX oZRX
+    NewOToken BAT oBAT
+    Give oBAT 10e18 BAT -- Faucet some bat to borrow
+    Support oZRX collateralFactor:0.5
+    Support oBAT collateralFactor:0.5
+    Prep Geoff Some ZRX oZRX
+    Mint Geoff 100e18 oZRX
+    EnterMarkets Geoff oZRX oBAT
+    From Coburn (Comptroller SetGuardianMarketPaused oBAT "Borrow" True)
+    AllowFailures
+    Borrow Geoff 1e18 oBAT
+    Assert Revert "revert borrow is paused"
+    Assert Equal (oToken oBAT BorrowBalance Geoff) 0
+    Assert Equal (Erc20 BAT TokenBalance Geoff) 0
+    Assert Equal (Erc20 BAT TokenBalance oBAT) (Exactly 10e18)
+    Comptroller SetGuardianMarketPaused oBAT "Borrow" False
+    Borrow Geoff 1e18 oBAT
+    Assert Equal (oToken oBAT BorrowBalance Geoff) (Exactly 1e18)
+    Assert Equal (Erc20 BAT TokenBalance Geoff) (Exactly 1e18)
+    Assert Equal (Erc20 BAT TokenBalance oBAT) (Exactly 9e18)

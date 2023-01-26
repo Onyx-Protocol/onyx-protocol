@@ -1,0 +1,140 @@
+-- Enter and Exit Markets Tests
+
+Test "Enter Markets Idempotent"
+	NewComptroller
+	Assert Equal (Comptroller MembershipLength Geoff) Zero
+	Assert Equal (Comptroller AssetsIn Geoff) []
+	ListedOToken ZRX oZRX
+	EnterMarkets Geoff oZRX
+	Assert Log MarketEntered (oToken (Address oZRX)) (account (Address Geoff))
+	Assert Equal (Comptroller MembershipLength Geoff) (Exactly 1)
+	Assert True (Comptroller CheckMembership Geoff oZRX)
+	ListedOToken OMG oOMG
+	EnterMarkets Geoff oZRX oOMG
+	Assert Equal (Comptroller MembershipLength Geoff) (Exactly 2)
+	Assert True (Comptroller CheckMembership Geoff oZRX)
+	Assert True (Comptroller CheckMembership Geoff oOMG)
+	Assert Equal (Comptroller AssetsIn Geoff) [(Address oZRX) (Address oOMG)]
+
+Test "Entered Market Must Be Supported"
+	NewComptroller
+	Assert Equal (Comptroller MembershipLength Geoff) Zero
+	ListedOToken ZRX oZRX
+	EnterMarkets Geoff oZRX
+	Assert Equal (Comptroller MembershipLength Geoff) (Exactly 1)
+	NewOToken OMG oOMG
+	EnterMarkets Geoff oZRX oOMG
+	Assert Equal (Comptroller MembershipLength Geoff) (Exactly 1)
+	Assert True (Comptroller CheckMembership Geoff oZRX)
+	Assert False (Comptroller CheckMembership Geoff oOMG)
+	Support oOMG
+	EnterMarkets Geoff oZRX oOMG
+	Assert Equal (Comptroller MembershipLength Geoff) (Exactly 2)
+	Assert True (Comptroller CheckMembership Geoff oZRX)
+	Assert True (Comptroller CheckMembership Geoff oOMG)
+
+Test "Exit single market"
+	NewComptroller
+	ListedOToken ZRX oZRX
+	EnterMarkets Geoff oZRX
+	Assert Equal (Comptroller AssetsIn Geoff) [(Address oZRX)]
+	ExitMarket Geoff oZRX
+	Assert Equal (Comptroller AssetsIn Geoff) []
+
+Test "Exit non-entered market"
+	NewComptroller
+	ListedOToken ZRX oZRX
+	ExitMarket Geoff oZRX
+	Assert Equal (Comptroller AssetsIn Geoff) []
+
+Test "Exit one of two market from the front"
+	NewComptroller
+	ListedOToken ZRX oZRX
+	ListedOToken OMG oOMG
+	EnterMarkets Geoff oZRX oOMG
+	Assert Equal (Comptroller AssetsIn Geoff) [(Address oZRX) (Address oOMG)]
+	ExitMarket Geoff oZRX
+	Assert Equal (Comptroller AssetsIn Geoff) [(Address oOMG)]
+
+Test "Exit one of two market from the back"
+	NewComptroller
+	ListedOToken ZRX oZRX
+	ListedOToken OMG oOMG
+	EnterMarkets Geoff oZRX oOMG
+	Assert Equal (Comptroller AssetsIn Geoff) [(Address oZRX) (Address oOMG)]
+	ExitMarket Geoff oOMG
+	Assert Equal (Comptroller AssetsIn Geoff) [(Address oZRX)]
+
+Test "Exit multiple markets"
+	NewComptroller
+	ListedOToken ZRX oZRX
+	ListedOToken OMG oOMG
+	ListedOToken BAT oBAT
+	ListedOToken REP oREP
+	ListedOToken DAI oDAI
+	EnterMarkets Geoff oZRX oOMG oBAT oREP oDAI
+	Assert Equal (Comptroller AssetsIn Geoff) [(Address oZRX) (Address oOMG) (Address oBAT) (Address oREP) (Address oDAI)]
+	ExitMarket Geoff oZRX
+	Assert Equal (Comptroller AssetsIn Geoff) [(Address oDAI) (Address oOMG) (Address oBAT) (Address oREP)]
+	ExitMarket Geoff oREP
+	Assert Equal (Comptroller AssetsIn Geoff) [(Address oDAI) (Address oOMG) (Address oBAT)]
+	ExitMarket Geoff oOMG
+	Assert Equal (Comptroller AssetsIn Geoff) [(Address oDAI) (Address oBAT)]
+	ExitMarket Geoff oDAI
+	Assert Equal (Comptroller AssetsIn Geoff) [(Address oBAT)]
+	ExitMarket Geoff oBAT
+	Assert Equal (Comptroller AssetsIn Geoff) []
+
+Test "Realistic Market Scenario"
+	PricedComptroller
+	ListedOToken ZRX oZRX
+	SetPriceCF oZRX 0.002 0.4
+	ListedEtherToken oETH
+	Comptroller SetCollateralFactor oEth 0.8
+	ListedOToken BAT oBAT
+	SetPriceCF oBAT 0.0015 0.3
+	-- Mint some oZRX and oETH
+	Prep Geoff 1250e18 ZRX oZRX
+	Mint Geoff 1250e18 oZRX -- Liquidity -> 0.4 * 0.002 * 1250e18 = 1.0e18
+	SendMintEth Geoff 2.5e18 oETH -- Liqiuidity -> 0.8 * 1.0 * 2.5e18 = 2.0e18
+	-- Check liquidity is zero when not in any markets
+	Assert Equal (Comptroller Liquidity Geoff) Zero
+	-- Enter ZRX and check liquidity
+	EnterMarkets Geoff oZRX
+	Assert Equal (Comptroller Liquidity Geoff) 1.0e18
+	-- Fail to borrow BAT due to liquidity
+	Give oBAT 1000e18 BAT
+	HoldInvariants
+	Borrow Geoff 1000e18 oBAT -- 1000e18 * 0.0015 = 1.5e18 required liquidity
+							  -- But since we're only in ZRX, we only have 1.0e18 liquidity
+	Assert Failure COMPTROLLER_REJECTION BORROW_COMPTROLLER_REJECTION INSUFFICIENT_LIQUIDITY
+	-- Enter oETH and check liquidity
+	EnterMarkets Geoff oETH
+	Assert Equal (Comptroller Liquidity Geoff) 3.0e18 -- Sum of oETH and oZRX liquidity from above
+	-- Borrow previous BAT amount given liquidity
+	Borrow Geoff 1000e18 oBAT
+	Assert Equal (Comptroller Liquidity Geoff) 1.5e18 -- Less the borrow amount's toll
+	-- Try to exit a eth market but fail due to given borrow requiring eth as collateral
+	HoldInvariants
+	ExitMarket Geoff oETH
+	Assert Failure REJECTION EXIT_MARKET_REJECTION INSUFFICIENT_LIQUIDITY -- Liquidity check fails
+	Assert Equal (Comptroller AssetsIn Geoff) [(Address oZRX) (Address oBAT) (Address oETH)]
+	-- Repay some borrow and exit market OMG
+	Allow Geoff oBAT
+	RepayBorrow Geoff 500e18 oBAT
+	Assert Equal (Comptroller Liquidity Geoff) 2.25e18 -- With 0.75e18 repaid
+	ExitMarket Geoff oETH
+	Assert Equal (Comptroller AssetsIn Geoff) [(Address oZRX) (Address oBAT)]
+	Assert Equal (Comptroller Liquidity Geoff) 0.25e18 -- Less Eth's 2.0e18 collateral weight
+	-- Try and exit oBAT (firist without, then after, repaying)
+	HoldInvariants
+	ExitMarket Geoff oBAT
+	Assert Failure NONZERO_BORROW_BALANCE EXIT_MARKET_BALANCE_OWED
+	RepayBorrow Geoff UInt256Max oBAT
+	ExitMarket Geoff oBAT
+	Assert Equal (Comptroller AssetsIn Geoff) [(Address oZRX)]
+	Assert Equal (Comptroller Liquidity Geoff) 1.0e18 -- Back to just oZRX
+	-- Exit oZRX
+	ExitMarket Geoff oZRX
+	Assert Equal (Comptroller AssetsIn Geoff) []
+	Assert Equal (Comptroller Liquidity Geoff) 0e18 -- Back to nothing

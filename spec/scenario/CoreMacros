@@ -1,0 +1,251 @@
+-- These are included in each scenario
+
+Macro Successfully
+    Invariant Success
+
+Macro AllowFailures
+    ClearInvariants Success
+
+Macro PricedComptroller closeFactor=0.1 maxAssets=20
+    Unitroller Deploy
+    PriceOracle Deploy Simple
+    ComptrollerImpl Deploy ScenarioG1 ScenComptrollerG1
+    Unitroller SetPendingImpl ScenComptrollerG1
+    PriceOracleProxy Deploy Admin (PriceOracle Address) (Address Zero) (Address Zero) (Address Zero) (Address Zero) (Address Zero) -- if listing oEther use ListedEtherToken to replace proxy
+    ComptrollerImpl ScenComptrollerG1 BecomeG1 (PriceOracleProxy Address) closeFactor maxAssets
+    ComptrollerImpl Deploy Scenario ScenComptroller
+    Unitroller SetPendingImpl ScenComptroller
+    ComptrollerImpl ScenComptroller Become
+
+Macro NewComptroller price=1.0 closeFactor=0.1 maxAssets=20
+    --g1
+    Unitroller Deploy
+    PriceOracle Deploy Fixed price
+    ComptrollerImpl Deploy ScenarioG1 ScenComptrollerG1
+    Unitroller SetPendingImpl ScenComptrollerG1
+    PriceOracleProxy Deploy Admin (PriceOracle Address) (Address Zero) (Address Zero) (Address Zero) (Address Zero) (Address Zero) -- if listing oEther use ListedEtherToken to replace proxy
+    ComptrollerImpl ScenComptrollerG1 BecomeG1 (PriceOracleProxy Address) closeFactor maxAssets
+    --g2
+    ComptrollerImpl Deploy StandardG2 ComptrollerG2
+    Unitroller SetPendingImpl ComptrollerG2
+    ComptrollerImpl ComptrollerG2 BecomeG2
+    --g3
+    ComptrollerImpl Deploy StandardG3 ComptrollerG3
+    Unitroller SetPendingImpl ComptrollerG3
+    ComptrollerImpl ComptrollerG3 BecomeG3 1e18 []
+    --g4
+    ComptrollerImpl Deploy StandardG4 ComptrollerG4
+    Unitroller SetPendingImpl ComptrollerG4
+    ComptrollerImpl ComptrollerG4 BecomeG4
+    --g5
+    ComptrollerImpl Deploy ScenarioG5 ComptrollerG5
+    Unitroller SetPendingImpl ComptrollerG5
+    ComptrollerImpl ComptrollerG5 BecomeG5
+    --current
+    ComptrollerImpl Deploy Scenario ComptrollerScen
+    Unitroller SetPendingImpl ComptrollerScen
+    ComptrollerImpl ComptrollerScen Become
+
+Macro NewOToken erc20 oToken borrowRate=0.000005 initialExchangeRate=2e9 decimals=8 tokenType=Standard delegatorType=OErc20DelegatorScenario oTokenType=OErc20DelegateScenario admin=Admin becomeImplementationData="0x0"
+    Erc20 Deploy tokenType erc20 erc20
+    InterestRateModel Deploy Fixed StdInterest borrowRate -- Note: interest rate model probably shouldn't be global
+    OTokenDelegate Deploy oTokenType oErc20Delegate
+    OToken Deploy delegatorType oToken oToken (Erc20 erc20 Address) (Comptroller Address) (InterestRateModel StdInterest Address) initialExchangeRate decimals admin (OTokenDelegate oErc20Delegate Address) becomeImplementationData
+
+-- Same as NewOToken but does not deploy an ERC20. Used for special ERC20s that are initialized differently
+Macro NewOTokenBringERC20 erc20 oToken borrowRate=0.000005 initialExchangeRate=2e9 decimals=8 delegatorType=OErc20DelegatorScenario oTokenType=OErc20DelegateScenario admin=Admin becomeImplementationData="0x0"
+    InterestRateModel Deploy Fixed StdInterest borrowRate -- Note: interest rate model probably shouldn't be global
+    OTokenDelegate Deploy oTokenType oErc20Delegate
+    OToken Deploy delegatorType oToken oToken (Erc20 erc20 Address) (Comptroller Address) (InterestRateModel StdInterest Address) initialExchangeRate decimals admin (OTokenDelegate oErc20Delegate Address) becomeImplementationData
+
+Macro NewOTokenImmutable erc20 oToken borrowRate=0.000005 initialExchangeRate=2e9 decimals=8 tokenType=Standard oTokenType=Scenario admin=Admin
+    Erc20 Deploy tokenType erc20 erc20
+    InterestRateModel Deploy Fixed StdInterest borrowRate -- Note: interest rate model probably shouldn't be global
+    OToken Deploy oTokenType oToken oToken (Erc20 erc20 Address) (Comptroller Address) (InterestRateModel StdInterest Address) initialExchangeRate decimals admin
+
+Macro NewEtherToken oToken borrowRate=0.000005 initialExchangeRate=2e9 decimals=8 admin=Admin
+    InterestRateModel Deploy Fixed StdInterest borrowRate -- Note: interest rate model probably shouldn't be global
+    OToken Deploy OEtherScenario oToken oToken (Comptroller Address) (InterestRateModel StdInterest Address) initialExchangeRate decimals admin
+
+Macro ListedOToken erc20 oToken borrowRate=0.000005 initialExchangeRate=2e9 decimals=8 tokenType=Standard delegatorType=OErc20DelegatorScenario oTokenType=OErc20DelegateScenario admin=Admin
+    NewOToken erc20 oToken borrowRate initialExchangeRate decimals tokenType delegatorType oTokenType admin
+    Comptroller SupportMarket oToken
+
+Macro ListedOTokenImmutable erc20 oToken borrowRate=0.000005 initialExchangeRate=2e9 decimals=8 tokenType=Standard oTokenType=Scenario admin=Admin
+    NewOTokenImmutable erc20 oToken borrowRate initialExchangeRate decimals tokenType oTokenType admin
+    Comptroller SupportMarket oToken
+
+Macro ListedEtherToken oToken borrowRate=0.000005 initialExchangeRate=2e9 decimals=8 admin=Admin
+    NewEtherToken oToken borrowRate initialExchangeRate decimals admin
+    Comptroller SupportMarket oToken
+    PriceOracleProxy Deploy Admin (PriceOracle Address) (Address oETH) (Address Zero) (Address Zero) (Address Zero) (Address Zero)
+    Comptroller SetPriceOracle (PriceOracleProxy Address)
+
+Macro ListedEtherTokenMinted oToken borrowRate=0.000005 initialExchangeRate=2e9 decimals=8 admin=Admin
+    NewEtherToken oToken borrowRate initialExchangeRate decimals admin
+    Comptroller SupportMarket oToken
+    CallMintEth Root 1e18 oToken
+
+Macro SetPriceCF oToken price collateralFactor
+    PriceOracle SetPrice oToken price
+    Comptroller SetCollateralFactor oToken collateralFactor
+
+Macro Give user amount erc20
+    Erc20 erc20 Faucet user amount
+
+Macro Donate token amount
+    (Trx Value amount (OToken token Donate))
+
+Macro Prep user amount erc20 token allowanceAmount=Nothing
+    Erc20 erc20 Faucet user amount
+    From user (Erc20 erc20 Approve token (Default allowanceAmount amount))
+
+Macro Allow user token
+    From user (Erc20 (OToken token Underlying) Approve token UInt256Max)
+
+Macro AccrueInterest token
+    OToken token AccrueInterest
+
+Macro Mint user amount token
+    From user (OToken token Mint amount)
+
+Macro SendMintEth user amount token
+    From user (Trx GasPrice 0 (Trx Value amount (Send token amount)))
+
+Macro CallMintEth user amount token
+    From user (Trx GasPrice 0 (Trx Value amount (OToken token Mint)))
+
+Macro Redeem user amount token
+    From user (OToken token Redeem amount)
+
+Macro RedeemEth user amount token
+    Trx GasPrice 0 (From user (OToken token Redeem amount))
+
+Macro RedeemUnderlying user amount token
+    From user (OToken token RedeemUnderlying amount)
+
+Macro RedeemUnderlyingEth user amount token
+    Trx GasPrice 0 (From user (OToken token RedeemUnderlying amount))
+
+Macro BorrowEth user amount token
+    Trx GasPrice 0 (From user (OToken token Borrow amount))
+
+Macro Borrow user amount token
+    From user (OToken token Borrow amount)
+
+Macro RepayBorrow user amount token
+    From user (OToken token RepayBorrow amount)
+
+Macro RepayBorrowEth user amount token
+    From user (Trx GasPrice 0 (Trx Value amount (OToken token RepayBorrow)))
+
+Macro RepayBorrowEthMax user amount token
+    From user (Trx GasPrice 0 (Trx Value amount (Maximillion RepayBehalf user)))
+
+Macro RepayBorrowBehalf user behalf amount token
+    From user (OToken token RepayBorrowBehalf behalf amount)
+
+Macro RepayBorrowEthBehalf user behalf amount token
+    From user (Trx GasPrice 0 (Trx Value amount (OToken token RepayBorrowBehalf behalf)))
+
+Macro Liquidate liquidator _ borrower amount token _ collateral
+    From liquidator (OToken token Liquidate borrower collateral amount)
+
+Macro LiquidateEthColl liquidator _ borrower amount token _ collateral
+    From liquidator (Trx GasPrice 0 (OToken token Liquidate borrower collateral amount))
+
+Macro LiquidateEthBorrow liquidator _ borrower amount token _ collateral
+    From liquidator (Trx GasPrice 0 (Trx Value amount (OToken token Liquidate borrower collateral)))
+
+Macro Seize amount token caller liquidator borrower
+    From caller (OToken token Seize liquidator borrower amount)
+
+Macro EvilSeize token amount treasure seizer seizee
+    OToken token EvilSeize treasure seizer seizee amount
+
+Macro Support oToken collateralFactor=0.5
+    Comptroller SupportMarket oToken
+    Comptroller SetCollateralFactor oToken collateralFactor
+
+Macro SetCollateralFactor oToken collateralFactor=0.5
+    Comptroller SetCollateralFactor oToken collateralFactor
+
+Macro AddReserves amount token user=Root
+    From user (OToken token AddReserves amount)
+
+Macro ReduceReserves amount token
+    OToken token ReduceReserves amount
+
+Macro FastForward n blocks
+    Comptroller FastForward n blocks
+
+Macro EnterMarkets user ...markets
+    From user (Comptroller EnterMarkets markets)
+
+Macro ExitMarket user market
+    From user (Comptroller ExitMarket market)
+
+Macro Transfer from to amount token
+    From from (Erc20 token Transfer to amount)
+
+Macro Cash oToken
+    Read Erc20 (OToken oToken Underlying) TokenBalance oToken
+
+Macro QuickMint amount oToken from=Me
+    Give from amount (OToken oToken Underlying)
+    Allow from oToken
+    From from (OToken oToken Mint amount)
+
+Macro QuickBorrow amount oToken ...collateral
+    From Me (Comptroller EnterMarkets collateral)
+    From Me (Comptroller EnterMarkets (oToken))
+    From Me (OToken oToken Borrow amount)
+
+-- Macro for performing a borrow with the sole
+-- purpose of adding interest to the erc20 market
+Macro BorrowAndRepayWithInterest erc20 oToken amount interestAmount interestRate blocks reserveRate=0
+    -- TODO: Make invariant success for these?
+    -- TODO: Named args as macros
+    InterestRateModel Deploy Fixed Std interestRate
+    OToken oToken SetInterestRateModel (InterestRateModel Std Address)
+    OToken oToken SetReserveFactor reserveRate
+    ListedOToken COLLAT cCOLLAT
+    Comptroller SetCollateralFactor cCOLLAT 0.9
+    Prep Torrey 1e30 COLLAT cCOLLAT
+    Mint Torrey 1e30 cCOLLAT
+    EnterMarkets Torrey cCOLLAT oToken
+    Assert True (Comptroller CheckMembership Torrey cCOLLAT)
+    Assert True (Comptroller CheckMembership Torrey oToken)
+    Borrow Torrey amount oToken
+    -- Cool, we've borrowed, now let's accrue interest then repay all
+    FastForward blocks Blocks
+    -- RepayBorrow Torrey (OToken BorrowBalance Torrey) oToken
+    From Torrey (Erc20 erc20 Approve oToken amount)
+    RepayBorrow Torrey amount oToken
+    From Torrey (Erc20 erc20 Approve oToken interestAmount)
+    Give Torrey interestAmount erc20
+    RepayBorrow Torrey interestAmount oToken
+    Assert Equal (OToken oToken BorrowBalance Torrey) Zero
+
+-- Macro for performing a borrow with the sole
+-- purpose of adding interest to the ether market
+Macro BorrowAndRepayEthWithInterest oEther amount interestAmount interestRate blocks reserveRate=0
+    -- TODO: Make invariant success for these?
+    -- TODO: Named args as macros
+    InterestRateModel Deploy Fixed Std interestRate
+    OToken oEther SetInterestRateModel (InterestRateModel Std Address)
+    OToken oEther SetReserveFactor reserveRate
+    ListedOToken COLLAT cCOLLAT
+    Comptroller SetCollateralFactor cCOLLAT 0.9
+    Prep Torrey 1e30 COLLAT cCOLLAT
+    Mint Torrey 1e30 cCOLLAT
+    EnterMarkets Torrey cCOLLAT oEther
+    Assert True (Comptroller CheckMembership Torrey cCOLLAT)
+    Assert True (Comptroller CheckMembership Torrey oEther)
+    Borrow Torrey amount oEther
+    -- Cool, we've borrowed, now let's accrue interest then repay all
+    FastForward blocks Blocks
+    -- RepayBorrow Torrey (OToken BorrowBalance Torrey) oEther
+    RepayBorrowEth Torrey amount oEther
+    RepayBorrowEth Torrey interestAmount oEther
+    Assert Equal (OToken oEther BorrowBalance Torrey) Zero

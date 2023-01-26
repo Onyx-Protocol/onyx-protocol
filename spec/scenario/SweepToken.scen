@@ -1,0 +1,29 @@
+
+Test "Attempt to sweep underlying token"
+    NewComptroller price:1.0
+    NewOToken ZRX oZRX
+    NewOToken BAT oBAT
+    Give oBAT 10e18 BAT -- Faucet some bat to sweep
+    Support oZRX collateralFactor:0.5
+    Support oBAT collateralFactor:0.5
+    AllowFailures
+    oToken oBAT SweepToken BAT
+    Assert Revert "revert OErc20::sweepToken: can not sweep underlying token"
+
+Test "Succesfully Sweep standard non-underlying token from OErc20"
+    NewComptroller price:1.0
+    Erc20 Deploy Standard ZRX "ZRX" 18
+    NewOToken BAT oBAT
+    Give oBAT 10e18 ZRX -- Faucet some ZRX to sweep
+    Support oBAT collateralFactor:0.5
+    oToken oBAT SweepToken ZRX
+    Assert Equal (Erc20 ZRX TokenBalance Admin) (10e18)
+
+Test "Succesfully Sweep non-standard non-underlying token from OErc20"
+    NewComptroller price:1.0
+    Erc20 Deploy NonStandard USDT "USDT" 18
+    NewOToken BAT oBAT
+    Give oBAT 10e18 USDT -- Faucet some USDT to sweep
+    Support oBAT collateralFactor:0.5
+    oToken oBAT SweepToken USDT
+    Assert Equal (Erc20 USDT TokenBalance Admin) (10e18)
