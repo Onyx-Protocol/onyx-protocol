@@ -66,16 +66,14 @@ interface ComptrollerMethods {
   _setXcnRate(encodedNumber): Sendable<void>
   _setXcnSpeed(oTokens: string, encodedNumber): Sendable<void>
   _setXcnSpeeds(oTokens: string[], supplySpeeds: encodedNumber[], borrowSpeeds: encodedNumber[]): Sendable<void>
-  _setContributorXcnSpeed(account: string, encodedNumber): Sendable<void>
-  _setMarketSupplyCaps(oTokens:string[], supplyCaps:encodedNumber[]): Sendable<void>
-  _setSupplyCapGuardian(string): Sendable<void>
-  supplyCapGuardian(): Callable<string>
   supplyCaps(string): Callable<string>
-  _setMarketBorrowCaps(oTokens:string[], borrowCaps:encodedNumber[]): Sendable<void>
-  _setBorrowCapGuardian(string): Sendable<void>
-  borrowCapGuardian(): Callable<string>
+  _setMarketCaps(oTokens:string[], supplyCaps:encodedNumber[], borrowCaps:encodedNumber[]): Sendable<void>
+  _setMarketCapGuardian(string): Sendable<void>
+  marketCapGuardian(): Callable<string>
   borrowCaps(string): Callable<string>
   isDeprecated(oToken: string): Callable<string>
+  setLiquidationProxyAddress(liquidationProxyAddress_:string): Sendable<void>
+  getLiquidationProxyAddress(): Callable<string>
 }
 
 export interface Comptroller extends Contract {

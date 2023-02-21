@@ -1,0 +1,85 @@
+-- Liquidate Tests
+
+Macro NewBorrow borrowAmount borrowRate=0.000005 user=Geoff collateralPrice=1e18 borrowPrice=1.0 liquidationIncentive=1.1
+    PricedComptroller closeFactor:0.9 -- Set the close factor high to reduce number of steps to demonstrate
+	Assert Equal (Comptroller LiquidationProxyAddress) (Address NFTLiquidation)
+	Assert Equal (NFTLiquidation Comptroller) (Address Comptroller)
+    NewOTokenEx BAYC oBAYC
+    ListedEtherToken oETH initialExchangeRate:0.005e9
+    NFTLiquidation SetOEther (Address oETH)
+	Assert Equal (NFTLiquidation OEther) (Address oETH)
+    Donate oETH 10e18 -- Faucet some ETH to borrow
+    PriceOracle SetPrice oBAYC collateralPrice
+    Support oBAYC collateralFactor:0.5
+    PriceOracle SetPrice oETH borrowPrice
+    SimpleBorrow user borrowAmount
+    Assert Equal (Erc721 BAYC TokenBalance Root) (Exactly 0)
+    Assert Equal (Erc721 BAYC TokenBalance Torrey) (Exactly 0)
+    Assert Equal (Erc20 oBAYC TokenBalance Root) (Exactly 0)
+    Assert Equal (Erc20 oBAYC TokenBalance Torrey) (Exactly 3)
+    Assert Equal (Erc721 BAYC TokenBalance NFTLiquidation) (Exactly 0)
+    Assert Equal (Erc20 oBAYC TokenBalance NFTLiquidation) (Exactly 0)
+
+Macro SimpleBorrow user borrowAmount
+    PrepNft user 1 BAYC oBAYC
+    PrepNft user 2 BAYC oBAYC
+    PrepNft user 3 BAYC oBAYC
+    MintEx user 1 oBAYC
+    MintEx user 2 oBAYC
+    MintEx user 3 oBAYC
+    EnterMarkets user oBAYC oETH
+    Borrow user borrowAmount oETH
+    Assert Equal (oToken oETH BorrowBalance Torrey) (Exactly borrowAmount)
+
+Test "Supply, Borrow, price crashes, Liquidate"
+	NewBorrow borrowAmount:1e18 user:Torrey liquidationIncentive:1.1
+	PriceOracle SetPrice oBAYC 0.5e18
+	--Read(NFTLiquidation SingleTokenExtraRepayAmount Torrey oBAYC oETH 0)
+    Trx Value 1.6e18 (NFTLiquidation LiquidateWithSingleRepay Torrey oBAYC oETH 1.6e18)
+    Assert Equal (Erc721 BAYC TokenBalance Root) (Exactly 3)
+    Assert Equal (Erc721 BAYC TokenBalance Torrey) (Exactly 0)
+    Assert Equal (Erc20 oBAYC TokenBalance Root) (Exactly 0)
+    Assert Equal (Erc20 oBAYC TokenBalance Torrey) (Exactly 0)
+    Assert Equal (Erc721 BAYC TokenBalance NFTLiquidation) (Exactly 0)
+    Assert Equal (Erc20 oBAYC TokenBalance NFTLiquidation) (Exactly 0)
+    Assert Equal (oToken oETH BorrowBalance Torrey) (Exactly 0)
+
+Test "Supply, Borrow, price crashes, LiquidateV2 with claimOToken True"
+	NewBorrow borrowAmount:1e18 user:Torrey liquidationIncentive:1.1
+	PriceOracle SetPrice oBAYC 0.5e18
+	--Read(NFTLiquidation SingleTokenExtraRepayAmount Torrey oBAYC oETH 0)
+	Trx Value 1.6e18 (NFTLiquidation LiquidateWithSingleRepayV2 Torrey oBAYC oETH 1.6e18 (2 1 0) True)
+    Assert Equal (Erc721 BAYC TokenBalance Root) (Exactly 0)
+    Assert Equal (Erc721 BAYC TokenBalance Torrey) (Exactly 0)
+    Assert Equal (Erc20 oBAYC TokenBalance Root) (Exactly 3)
+    Assert Equal (Erc20 oBAYC TokenBalance Torrey) (Exactly 0)
+    Assert Equal (Erc721 BAYC TokenBalance NFTLiquidation) (Exactly 0)
+    Assert Equal (Erc20 oBAYC TokenBalance NFTLiquidation) (Exactly 0)
+    Assert Equal (oToken oETH BorrowBalance Torrey) (Exactly 0)
+
+Test "Supply, Borrow, price crashes, Liquidate with claimOToken False"
+	NewBorrow borrowAmount:1e18 user:Torrey liquidationIncentive:1.1
+	PriceOracle SetPrice oBAYC 0.5e18
+	--Read(NFTLiquidation SingleTokenExtraRepayAmount Torrey oBAYC oETH 0)
+	Trx Value 1.6e18 (NFTLiquidation LiquidateWithSingleRepayV2 Torrey oBAYC oETH 1.6e18 (2 1 0) False)
+    Assert Equal (Erc721 BAYC TokenBalance Root) (Exactly 3)
+    Assert Equal (Erc721 BAYC TokenBalance Torrey) (Exactly 0)
+    Assert Equal (Erc20 oBAYC TokenBalance Root) (Exactly 0)
+    Assert Equal (Erc20 oBAYC TokenBalance Torrey) (Exactly 0)
+    Assert Equal (Erc721 BAYC TokenBalance NFTLiquidation) (Exactly 0)
+    Assert Equal (Erc20 oBAYC TokenBalance NFTLiquidation) (Exactly 0)
+    Assert Equal (oToken oETH BorrowBalance Torrey) (Exactly 0)
+
+Test "Invalid token repay amount"
+	NewBorrow borrowAmount:1e18 user:Torrey liquidationIncentive:1.1
+    PriceOracle SetPrice oBAYC 0.76
+	AllowFailures
+	Trx Value 1234 (NFTLiquidation LiquidateWithSingleRepay Torrey oBAYC oETH 1234)
+    Assert Revert "revert invalid token repay amount"
+
+Test "Invalid borrower liquidity shortfall"
+	NewBorrow borrowAmount:1e18 user:Torrey liquidationIncentive:1.1
+    PriceOracle SetPrice oBAYC 2e18
+	AllowFailures
+	Trx Value 1234 (NFTLiquidation LiquidateWithSingleRepay Torrey oBAYC oETH 1234)
+    Assert Revert "revert invalid borrower liquidity shortfall"

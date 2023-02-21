@@ -175,7 +175,6 @@ describe('Gas report', () => {
   });
 
   describe.each([
-    ['unitroller-g6'],
     ['unitroller']
   ])('Xcn claims %s', (patch) => {
     beforeEach(async () => {
