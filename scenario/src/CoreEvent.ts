@@ -15,9 +15,15 @@ import { assertionCommands, processAssertionEvent } from './Event/AssertionEvent
 import { comptrollerCommands, processComptrollerEvent } from './Event/ComptrollerEvent';
 import { processUnitrollerEvent, unitrollerCommands } from './Event/UnitrollerEvent';
 import { comptrollerImplCommands, processComptrollerImplEvent } from './Event/ComptrollerImplEvent';
+import { nftLiquidationCommands, processNFTLiquidationEvent } from './Event/NFTLiquidationEvent';
+import { processNFTLiquidationProxyEvent, nftLiquidationProxyCommands } from './Event/NFTLiquidationProxyEvent';
+import { nftLiquidationImplCommands, processNFTLiquidationImplEvent } from './Event/NFTLiquidationImplEvent';
 import { oTokenCommands, processOTokenEvent } from './Event/OTokenEvent';
 import { oTokenDelegateCommands, processOTokenDelegateEvent } from './Event/OTokenDelegateEvent';
 import { erc20Commands, processErc20Event } from './Event/Erc20Event';
+import { oTokenExCommands, processOTokenExEvent } from './Event/OTokenExEvent';
+import { oTokenExDelegateCommands, processOTokenExDelegateEvent } from './Event/OTokenExDelegateEvent';
+import { erc721Commands, processErc721Event } from './Event/Erc721Event';
 import { interestRateModelCommands, processInterestRateModelEvent } from './Event/InterestRateModelEvent';
 import { priceOracleCommands, processPriceOracleEvent } from './Event/PriceOracleEvent';
 import { priceOracleProxyCommands, processPriceOracleProxyEvent } from './Event/PriceOracleProxyEvent';
@@ -691,6 +697,45 @@ export const commands: (View<any> | ((world: World) => Promise<View<any>>))[] = 
 
   new Command<{ event: EventV }>(
     `
+      #### NFTLiquidationProxy
+
+      * "NFTLiquidationProxy ...event" - Runs given NFTLiquidation event
+        * E.g. "NFTLiquidation SetPendingImpl MyLiquidationImpl"
+    `,
+    'NFTLiquidationProxy',
+    [new Arg('event', getEventV, { variadic: true })],
+    (world, from, { event }) => processNFTLiquidationProxyEvent(world, event.val, from),
+    { subExpressions: nftLiquidationProxyCommands() }
+  ),
+
+  new Command<{ event: EventV }>(
+    `
+      #### NFTLiquidation
+
+      * "NFTLiquidation ...event" - Runs given NFTLiquidation event
+        * E.g. "NFTLiquidation _setProtocolFeePercent 0x00"
+    `,
+    'NFTLiquidation',
+    [new Arg('event', getEventV, { variadic: true })],
+    (world, from, { event }) => processNFTLiquidationEvent(world, event.val, from),
+    { subExpressions: nftLiquidationCommands() }
+  ),
+
+  new Command<{ event: EventV }>(
+    `
+      #### NFTLiquidationImpl
+
+      * "NFTLiquidationImpl ...event" - Runs given NFTLiquidationImpl event
+        * E.g. "NFTLiquidationImpl MyImpl Become"
+    `,
+    'NFTLiquidationImpl',
+    [new Arg('event', getEventV, { variadic: true })],
+    (world, from, { event }) => processNFTLiquidationImplEvent(world, event.val, from),
+    { subExpressions: nftLiquidationImplCommands() }
+  ),
+
+  new Command<{ event: EventV }>(
+    `
       #### OToken
 
       * "OToken ...event" - Runs given OToken event
@@ -726,6 +771,45 @@ export const commands: (View<any> | ((world: World) => Promise<View<any>>))[] = 
     [new Arg('event', getEventV, { variadic: true })],
     (world, from, { event }) => processErc20Event(world, event.val, from),
     { subExpressions: erc20Commands() }
+  ),
+
+  new Command<{ event: EventV }>(
+    `
+      #### OTokenEx
+
+      * "OTokenEx ...event" - Runs given OTokenEx event
+        * E.g. "OTokenEx oBAYC Mint 1"
+    `,
+    'OTokenEx',
+    [new Arg('event', getEventV, { variadic: true })],
+    (world, from, { event }) => processOTokenExEvent(world, event.val, from),
+    { subExpressions: oTokenExCommands() }
+  ),
+
+  new Command<{ event: EventV }>(
+    `
+      #### OTokenExDelegate
+
+      * "OTokenExDelegate ...event" - Runs given OTokenExDelegate event
+        * E.g. "OTokenExDelegate Deploy OBAYCDelegate oBAYCDelegate"
+    `,
+    'OTokenExDelegate',
+    [new Arg('event', getEventV, { variadic: true })],
+    (world, from, { event }) => processOTokenExDelegateEvent(world, event.val, from),
+    { subExpressions: oTokenExDelegateCommands() }
+  ),
+
+  new Command<{ event: EventV }>(
+    `
+      #### Erc721
+
+      * "Erc721 ...event" - Runs given Erc721 event
+        * E.g. "Erc721 BAYC Facuet Geoff 1"
+    `,
+    'Erc721',
+    [new Arg('event', getEventV, { variadic: true })],
+    (world, from, { event }) => processErc721Event(world, event.val, from),
+    { subExpressions: erc721Commands() }
   ),
 
   new Command<{ event: EventV }>(

@@ -33,6 +33,7 @@ describe('OnyxLens', () => {
   describe('oTokenMetadata', () => {
     it('is correct for a oErc20', async () => {
       let oErc20 = await makeOToken();
+      const ss = await call(oErc20.underlying, 'decimals', [])
       expect(
         cullTuple(await call(onyxLens, 'oTokenMetadata', [oErc20._address]))
       ).toEqual(
@@ -54,6 +55,8 @@ describe('OnyxLens', () => {
           xcnSupplySpeed: "0",
           xcnBorrowSpeed: "0",
           borrowCap: "0",
+          dailyBorrowXcn: "0",
+          dailySupplyXcn: "0"
         }
       );
     });
@@ -80,6 +83,8 @@ describe('OnyxLens', () => {
         xcnSupplySpeed: "0",
         xcnBorrowSpeed: "0",
         borrowCap: "0",
+        dailyBorrowXcn: "0",
+        dailySupplyXcn: "0"
       });
     });
     it('is correct for oErc20 with set xcn speeds', async () => {
@@ -107,6 +112,8 @@ describe('OnyxLens', () => {
           xcnSupplySpeed: "250000000000000000",
           xcnBorrowSpeed: "750000000000000000",
           borrowCap: "0",
+          dailyBorrowXcn: "4320000000000000000000",
+          dailySupplyXcn: "1440000000000000000000"
         }
       );
     });
@@ -137,6 +144,8 @@ describe('OnyxLens', () => {
           xcnSupplySpeed: "0",
           xcnBorrowSpeed: "0",
           borrowCap: "0",
+          dailyBorrowXcn: "0",
+          dailySupplyXcn: "0"
         },
         {
           borrowRatePerBlock: "0",
@@ -156,6 +165,8 @@ describe('OnyxLens', () => {
           xcnSupplySpeed: "0",
           xcnBorrowSpeed: "0",
           borrowCap: "0",
+          dailyBorrowXcn: "0",
+          dailySupplyXcn: "0"
         }
       ]);
     });

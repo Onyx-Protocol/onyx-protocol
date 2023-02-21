@@ -6,8 +6,10 @@ const {
 
 const {
   makeOToken,
+  makeOTokenEx,
   setBorrowRate,
-  pretendBorrow
+  pretendBorrow,
+  quickMintNFT,
 } = require('../Utils/Onyx');
 
 describe('OToken', function () {
@@ -221,6 +223,122 @@ describe('OToken', function () {
   describe('getCash', () => {
     it("gets the cash", async () => {
       const oToken = await makeOToken();
+      const result = await call(oToken, 'getCash');
+      expect(result).toEqualNumber(0);
+    });
+  });
+});
+
+describe('OTokenEx', function () {
+  let root, admin, accounts;
+  beforeEach(async () => {
+    [root, admin, ...accounts] = saddle.accounts;
+  });
+
+  describe('constructor', () => {
+    it("fails when non erc-721 underlying", async () => {
+      await expect(makeOTokenEx({ underlying: { _address: root } })).rejects.toRevert("revert");
+    });
+
+    it("succeeds with erc-721 underlying and non-zero exchange rate", async () => {
+      const oToken = await makeOTokenEx();
+      expect(await call(oToken, 'underlying')).toEqual(oToken.underlying._address);
+      expect(await call(oToken, 'admin')).toEqual(root);
+    });
+
+    it("succeeds when setting admin to contructor argument", async () => {
+      const oToken = await makeOTokenEx({ admin: admin });
+      expect(await call(oToken, 'admin')).toEqual(admin);
+    });
+  });
+
+  describe('name, symbol, decimals', () => {
+    let oToken;
+
+    beforeEach(async () => {
+      oToken = await makeOTokenEx({ name: "OToken Foo", symbol: "cFOO", decimals: 10 });
+    });
+
+    it('should return correct name', async () => {
+      expect(await call(oToken, 'name')).toEqual("OToken Foo");
+    });
+
+    it('should return correct symbol', async () => {
+      expect(await call(oToken, 'symbol')).toEqual("cFOO");
+    });
+
+    it('should return correct decimals', async () => {
+      expect(await call(oToken, 'decimals')).toEqualNumber(10);
+    });
+  });
+
+  describe('balanceOfUnderlying', () => {
+    it("has an underlying balance", async () => {
+      const oToken = await makeOTokenEx({ supportMarket: true });
+      await send(oToken, 'harnessSetBalance', [root, 100]);
+      expect(await call(oToken, 'balanceOfUnderlying', [root])).toEqualNumber(100);
+    });
+  });
+
+  describe('borrowRatePerBlock', () => {
+    it("has zero borrow rate", async () => {
+      const oToken = await makeOTokenEx({ supportMarket: true });
+      const perBlock = await call(oToken, 'borrowRatePerBlock');
+      expect(perBlock).toEqual('0');
+    });
+  });
+
+  describe('supplyRatePerBlock', () => {
+    it("has zero supply rate", async () => {
+      const oToken = await makeOTokenEx({ supportMarket: true });
+      const perBlock = await call(oToken, 'supplyRatePerBlock');
+      await expect(perBlock).toEqualNumber('0');
+    });
+  });
+
+  describe("borrow", () => {
+    let borrower;
+    let oToken;
+
+    beforeEach(async () => {
+      borrower = accounts[0];
+      oToken = await makeOTokenEx();
+    });
+
+    it("reverts borrow action", async () => {
+      await expect(send(oToken, 'borrow', [1], { from: borrower })).rejects.toRevert();
+    });
+
+    it("borrowBalance is 0", async () => {
+      expect(await call(oToken, 'borrowBalanceStored', [borrower])).toEqualNumber(0)
+    });
+  });
+
+  describe('exchangeRateStored', () => {
+    let oToken;
+    let minter;
+
+    beforeEach(async () => {
+      oToken = await makeOTokenEx({comptrollerOpts: {kind: 'bool'}});
+      minter = accounts[0];
+    });
+
+    it("returns initial exchange rate with zero oTokenSupply", async () => {
+      const result = await call(oToken, 'exchangeRateStored');
+      expect(result).toEqualNumber(etherMantissa(1));
+    });
+
+    it("exchange rate after mint", async () => {
+      await send(oToken.comptroller, 'setMintAllowed', [true]);
+      expect(await quickMintNFT(oToken, minter, 1)).toSucceed();
+      const result = await call(oToken, 'exchangeRateStored');
+      expect(result).toEqualNumber(etherMantissa(1));
+    });
+  });
+
+  describe('getCash', () => {
+    it("gets the cash", async () => {
+      const oToken = await makeOTokenEx();
       const result = await call(oToken, 'getCash');
       expect(result).toEqualNumber(0);
     });

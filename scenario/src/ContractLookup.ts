@@ -6,11 +6,16 @@ import { Contract } from './Contract';
 import { mustString } from './Utils';
 
 import { OErc20Delegate } from './Contract/OErc20Delegate';
+import { OErc721Delegate } from './Contract/OErc721Delegate';
 import { Xcn } from './Contract/Xcn';
 import { Comptroller } from './Contract/Comptroller';
 import { ComptrollerImpl } from './Contract/ComptrollerImpl';
+import { NFTLiquidation } from './Contract/NFTLiquidation';
+import { NFTLiquidationImpl } from './Contract/NFTLiquidationImpl';
 import { OToken } from './Contract/OToken';
+import { OTokenEx } from './Contract/OTokenEx';
 import { Erc20 } from './Contract/Erc20';
+import { Erc721 } from './Contract/Erc721';
 import { InterestRateModel } from './Contract/InterestRateModel';
 import { PriceOracle } from './Contract/PriceOracle';
 import { AnchoredView } from './Contract/AnchoredView';
@@ -75,6 +80,10 @@ export async function getUnitroller(world: World): Promise<Comptroller> {
   return getWorldContract(world, [['Contracts', 'Unitroller']]);
 }
 
+export async function getNFTLiquidationProxy(world: World): Promise<NFTLiquidation> {
+  return getWorldContract(world, [['Contracts', 'NFTLiquidationProxy']]);
+}
+
 export async function getMaximillion(world: World): Promise<Comptroller> {
   return getWorldContract(world, [['Contracts', 'Maximillion']]);
 }
@@ -87,16 +96,36 @@ export async function getComptrollerImpl(world: World, comptrollerImplArg: Event
   return getWorldContract(world, [['Comptroller', mustString(comptrollerImplArg), 'address']]);
 }
 
+export async function getNFTLiquidation(world: World): Promise<NFTLiquidation> {
+  return getWorldContract(world, [['Contracts', 'NFTLiquidation']]);
+}
+
+export async function getNFTLiquidationImpl(world: World, nftLiquidationImplArg: Event): Promise<NFTLiquidationImpl> {
+  return getWorldContract(world, [['NFTLiquidation', mustString(nftLiquidationImplArg), 'address']]);
+}
+
 export function getOTokenAddress(world: World, oTokenArg: string): string {
   return getContractDataString(world, [['oTokens', oTokenArg, 'address']]);
+}
+
+export function getOTokenExAddress(world: World, oTokenArg: string): string {
+  return getContractDataString(world, [['oTokenExs', oTokenArg, 'address']]);
 }
 
 export function getOTokenDelegateAddress(world: World, oTokenDelegateArg: string): string {
   return getContractDataString(world, [['OTokenDelegate', oTokenDelegateArg, 'address']]);
 }
 
+export function getOTokenExDelegateAddress(world: World, oTokenDelegateArg: string): string {
+  return getContractDataString(world, [['OTokenExDelegate', oTokenDelegateArg, 'address']]);
+}
+
 export function getErc20Address(world: World, erc20Arg: string): string {
   return getContractDataString(world, [['Tokens', erc20Arg, 'address']]);
+}
+
+export function getErc721Address(world: World, erc20Arg: string): string {
+  return getContractDataString(world, [['Erc721Tokens', erc20Arg, 'address']]);
 }
 
 export async function getPriceOracleProxy(world: World): Promise<PriceOracle> {
@@ -155,6 +184,16 @@ export async function getErc20Data(
   return [contract, erc20Arg, <Map<string, string>>(<any>data)];
 }
 
+export async function getErc721Data(
+  world: World,
+  erc721Arg: string
+): Promise<[Erc721, string, Map<string, string>]> {
+  let contract = getWorldContract<Erc721>(world, [['Erc721Tokens', erc721Arg, 'address']]);
+  let data = getContractData(world, [['Erc721Tokens', erc721Arg]]);
+
+  return [contract, erc721Arg, <Map<string, string>>(<any>data)];
+}
+
 export async function getOTokenData(
   world: World,
   oTokenArg: string
@@ -163,6 +202,16 @@ export async function getOTokenData(
   let data = getContractData(world, [['OTokens', oTokenArg]]);
 
   return [contract, oTokenArg, <Map<string, string>>(<any>data)];
+}
+
+export async function getOTokenExData(
+  world: World,
+  oTokenExArg: string
+): Promise<[OTokenEx, string, Map<string, string>]> {
+  let contract = getWorldContract<OTokenEx>(world, [['oTokenExs', oTokenExArg, 'address']]);
+  let data = getContractData(world, [['OTokenExs', oTokenExArg]]);
+
+  return [contract, oTokenExArg, <Map<string, string>>(<any>data)];
 }
 
 export async function getOTokenDelegateData(
@@ -175,6 +224,16 @@ export async function getOTokenDelegateData(
   return [contract, oTokenDelegateArg, <Map<string, string>>(<any>data)];
 }
 
+export async function getOTokenExDelegateData(
+  world: World,
+  oTokenExDelegateArg: string
+): Promise<[OErc721Delegate, string, Map<string, string>]> {
+  let contract = getWorldContract<OErc721Delegate>(world, [['OTokenExDelegate', oTokenExDelegateArg, 'address']]);
+  let data = getContractData(world, [['OTokenExDelegate', oTokenExDelegateArg]]);
+
+  return [contract, oTokenExDelegateArg, <Map<string, string>>(<any>data)];
+}
+
 export async function getComptrollerImplData(
   world: World,
   comptrollerImplArg: string
@@ -183,6 +242,16 @@ export async function getComptrollerImplData(
   let data = getContractData(world, [['Comptroller', comptrollerImplArg]]);
 
   return [contract, comptrollerImplArg, <Map<string, string>>(<any>data)];
+}
+
+export async function getNFTLiquidationImplData(
+  world: World,
+  nftLiquidationImplArg: string
+): Promise<[NFTLiquidationImpl, string, Map<string, string>]> {
+  let contract = await getNFTLiquidationImpl(world, <Event>(<any>nftLiquidationImplArg));
+  let data = getContractData(world, [['NFTLiquidation', nftLiquidationImplArg]]);
+
+  return [contract, nftLiquidationImplArg, <Map<string, string>>(<any>data)];
 }
 
 export function getAddress(world: World, addressArg: string): string {
@@ -211,7 +280,8 @@ export function getAddress(world: World, addressArg: string): string {
     ['oTokens', addressArg, 'address'],
     ['OTokenDelegate', addressArg, 'address'],
     ['Tokens', addressArg, 'address'],
-    ['Comptroller', addressArg, 'address']
+    ['Comptroller', addressArg, 'address'],
+    ['NFTLiquidation', addressArg, 'address']
   ]);
 }
 

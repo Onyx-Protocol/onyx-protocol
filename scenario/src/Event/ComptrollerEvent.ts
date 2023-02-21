@@ -320,18 +320,6 @@ async function setXcnSpeeds(world: World, from: string, comptroller: Comptroller
   return world;
 }
 
-async function setContributorXcnSpeed(world: World, from: string, comptroller: Comptroller, contributor: string, speed: NumberV): Promise<World> {
-  let invokation = await invoke(world, comptroller.methods._setContributorXcnSpeed(contributor, speed.encode()), from, ComptrollerErrorReporter);
-
-  world = addAction(
-    world,
-    `Xcn speed for contributor ${contributor} set to ${speed.show()}`,
-    invokation
-  );
-
-  return world;
-}
-
 async function printLiquidity(world: World, comptroller: Comptroller): Promise<World> {
   let enterEvents = await getPastEvents(world, comptroller, 'StdComptroller', 'MarketEntered');
   let addresses = enterEvents.map((event) => event.returnValues['account']);
@@ -430,32 +418,8 @@ async function setGuardianMarketPaused(world: World, from: string, comptroller: 
   return world;
 }
 
-async function setMarketSupplyCaps(world: World, from: string, comptroller: Comptroller, oTokens: OToken[], supplyCaps: NumberV[]): Promise<World> {
-  let invokation = await invoke(world, comptroller.methods._setMarketSupplyCaps(oTokens.map(c => c._address), supplyCaps.map(c => c.encode())), from, ComptrollerErrorReporter);
-
-  world = addAction(
-      world,
-      `Supply caps on ${oTokens} set to ${supplyCaps}`,
-      invokation
-  );
-
-  return world;
-}
-
-async function setSupplyCapGuardian(world: World, from: string, comptroller: Comptroller, newSupplyCapGuardian: string): Promise<World> {
-  let invokation = await invoke(world, comptroller.methods._setSupplyCapGuardian(newSupplyCapGuardian), from, ComptrollerErrorReporter);
-
-  world = addAction(
-      world,
-      `Comptroller: ${describeUser(world, from)} sets supply cap guardian to ${newSupplyCapGuardian}`,
-      invokation
-  );
-
-  return world;
-}
-
-async function setMarketBorrowCaps(world: World, from: string, comptroller: Comptroller, oTokens: OToken[], borrowCaps: NumberV[]): Promise<World> {
-  let invokation = await invoke(world, comptroller.methods._setMarketBorrowCaps(oTokens.map(c => c._address), borrowCaps.map(c => c.encode())), from, ComptrollerErrorReporter);
+async function setMarketCaps(world: World, from: string, comptroller: Comptroller, oTokens: OToken[], supplyCaps: NumberV[], borrowCaps: NumberV[]): Promise<World> {
+  let invokation = await invoke(world, comptroller.methods._setMarketCaps(oTokens.map(c => c._address), supplyCaps.map(c => c.encode()), borrowCaps.map(c => c.encode())), from, ComptrollerErrorReporter);
 
   world = addAction(
     world,
@@ -466,12 +430,24 @@ async function setMarketBorrowCaps(world: World, from: string, comptroller: Comp
   return world;
 }
 
-async function setBorrowCapGuardian(world: World, from: string, comptroller: Comptroller, newBorrowCapGuardian: string): Promise<World> {
-  let invokation = await invoke(world, comptroller.methods._setBorrowCapGuardian(newBorrowCapGuardian), from, ComptrollerErrorReporter);
+async function setMarketCapGuardian(world: World, from: string, comptroller: Comptroller, newBorrowCapGuardian: string): Promise<World> {
+  let invokation = await invoke(world, comptroller.methods._setMarketCapGuardian(newBorrowCapGuardian), from, ComptrollerErrorReporter);
 
   world = addAction(
     world,
     `Comptroller: ${describeUser(world, from)} sets borrow cap guardian to ${newBorrowCapGuardian}`,
+    invokation
+  );
+
+  return world;
+}
+
+async function setLiquidationProxyAddress(world: World, from: string, comptroller: Comptroller, liquidationProxyAddress_: string): Promise<World> {
+  let invokation = await invoke(world, comptroller.methods.setLiquidationProxyAddress(liquidationProxyAddress_), from, ComptrollerErrorReporter);
+
+  world = addAction(
+    world,
+    `Comptroller: ${describeUser(world, from)} sets liquidation proxy address to ${liquidationProxyAddress_}`,
     invokation
   );
 
@@ -877,70 +853,46 @@ export function comptrollerCommands() {
       ],
       (world, from, {comptroller, oTokens, supplySpeeds, borrowSpeeds}) => setXcnSpeeds(world, from, comptroller, oTokens, supplySpeeds, borrowSpeeds)
     ),
-    new Command<{comptroller: Comptroller, contributor: AddressV, speed: NumberV}>(`
-      #### SetContributorXcnSpeed
-      * "Comptroller SetContributorXcnSpeed <contributor> <rate>" - Sets XCN speed for contributor
-      * E.g. "Comptroller SetContributorXcnSpeed contributor 1000
-      `,
-      "SetContributorXcnSpeed",
-      [
-        new Arg("comptroller", getComptroller, {implicit: true}),
-        new Arg("contributor", getAddressV),
-        new Arg("speed", getNumberV)
-      ],
-      (world, from, {comptroller, contributor, speed}) => setContributorXcnSpeed(world, from, comptroller, contributor.val, speed)
-    ),
-    new Command<{comptroller: Comptroller, oTokens: OToken[], supplyCaps: NumberV[]}>(`
-      #### SetMarketSupplyCaps
-      * "Comptroller SetMarketSupplyCaps (<OToken> ...) (<supplyCap> ...)" - Sets Market Supply Caps
-      * E.g. "Comptroller SetMarketSupplyCaps (oZRX oUSDC) (10000.0e18, 1000.0e6)
-      `,
-        "SetMarketSupplyCaps",
-        [
-          new Arg("comptroller", getComptroller, {implicit: true}),
-          new Arg("oTokens", getOTokenV, {mapped: true}),
-          new Arg("supplyCaps", getNumberV, {mapped: true})
-        ],
-        (world, from, {comptroller, oTokens, supplyCaps}) => setMarketSupplyCaps(world, from, comptroller, oTokens, supplyCaps)
-    ),
-    new Command<{comptroller: Comptroller, newSupplyCapGuardian: AddressV}>(`
-      #### SetSupplyCapGuardian
-        * "Comptroller SetSupplyCapGuardian newSupplyCapGuardian:<Address>" - Sets the Supply Cap Guardian for the Comptroller
-          * E.g. "Comptroller SetSupplyCapGuardian Geoff"
-      `,
-        "SetSupplyCapGuardian",
-        [
-          new Arg("comptroller", getComptroller, {implicit: true}),
-          new Arg("newSupplyCapGuardian", getAddressV)
-        ],
-        (world, from, {comptroller, newSupplyCapGuardian}) => setSupplyCapGuardian(world, from, comptroller, newSupplyCapGuardian.val)
-    ),
-    new Command<{comptroller: Comptroller, oTokens: OToken[], borrowCaps: NumberV[]}>(`
-      #### SetMarketBorrowCaps
+    new Command<{comptroller: Comptroller, oTokens: OToken[], supplyCaps: NumberV[], borrowCaps: NumberV[]}>(`
+      #### SetMarketCaps
 
-      * "Comptroller SetMarketBorrowCaps (<OToken> ...) (<borrowCap> ...)" - Sets Market Borrow Caps
-      * E.g "Comptroller SetMarketBorrowCaps (oZRX oUSDC) (10000.0e18, 1000.0e6)
+      * "Comptroller SetMarketCaps (<OToken> ...) (<supplyCap> ...) (<borrowCap> ...)" - Sets Market Borrow Caps
+      * E.g "Comptroller SetMarketCaps (oZRX oUSDC) (10000.0e18, 1000.0e6) (10000.0e18, 1000.0e6)
       `,
-      "SetMarketBorrowCaps",
+      "SetMarketCaps",
       [
         new Arg("comptroller", getComptroller, {implicit: true}),
         new Arg("oTokens", getOTokenV, {mapped: true}),
+        new Arg("supplyCaps", getNumberV, {mapped: true}),
         new Arg("borrowCaps", getNumberV, {mapped: true})
       ],
-      (world, from, {comptroller, oTokens, borrowCaps}) => setMarketBorrowCaps(world, from, comptroller, oTokens, borrowCaps)
+      (world, from, {comptroller, oTokens, supplyCaps, borrowCaps}) => setMarketCaps(world, from, comptroller, oTokens, supplyCaps, borrowCaps)
     ),
-    new Command<{comptroller: Comptroller, newBorrowCapGuardian: AddressV}>(`
-        #### SetBorrowCapGuardian
+    new Command<{comptroller: Comptroller, newMarketCapGuardian: AddressV}>(`
+        #### SetMarketCapGuardian
 
-        * "Comptroller SetBorrowCapGuardian newBorrowCapGuardian:<Address>" - Sets the Borrow Cap Guardian for the Comptroller
-          * E.g. "Comptroller SetBorrowCapGuardian Geoff"
+        * "Comptroller SetMarketCapGuardian newMarketCapGuardian:<Address>" - Sets the Borrow Cap Guardian for the Comptroller
+          * E.g. "Comptroller SetMarketCapGuardian Geoff"
       `,
-      "SetBorrowCapGuardian",
+      "SetMarketCapGuardian",
       [
         new Arg("comptroller", getComptroller, {implicit: true}),
-        new Arg("newBorrowCapGuardian", getAddressV)
+        new Arg("newMarketCapGuardian", getAddressV)
       ],
-      (world, from, {comptroller, newBorrowCapGuardian}) => setBorrowCapGuardian(world, from, comptroller, newBorrowCapGuardian.val)
+      (world, from, {comptroller, newMarketCapGuardian}) => setMarketCapGuardian(world, from, comptroller, newMarketCapGuardian.val)
+    ),
+    new Command<{comptroller: Comptroller, liquidationProxyAddress_: AddressV}>(`
+        #### SetLiquidationProxyAddress
+
+        * "Comptroller SetLiquidationProxyAddress liquidationProxyAddress_:<Address>" - Sets the Liquidation Proxy Address for the Comptroller
+          * E.g. "Comptroller SetLiquidationProxyAddress 0x00"
+      `,
+      "SetLiquidationProxyAddress",
+      [
+        new Arg("comptroller", getComptroller, {implicit: true}),
+        new Arg("liquidationProxyAddress_", getAddressV)
+      ],
+      (world, from, {comptroller, liquidationProxyAddress_}) => setLiquidationProxyAddress(world, from, comptroller, liquidationProxyAddress_.val)
     )
   ];
 }

@@ -82,7 +82,7 @@ async function makeComptroller(opts = {}) {
     const priceOracle = opts.priceOracle || await makePriceOracle(opts.priceOracleOpts);
     const closeFactor = etherMantissa(dfn(opts.closeFactor, .051));
     const liquidationIncentive = etherMantissa(1);
-    const xcn = opts.xcn || await deploy('Xcn', [opts.xcnOwner || root]);
+    const xcn = opts.xcn || await deploy('Chain');
     const xcnRate = etherUnsigned(dfn(opts.xcnRate, 1e18));
 
     await send(unitroller, '_setPendingImplementation', [comptroller._address]);
@@ -95,6 +95,28 @@ async function makeComptroller(opts = {}) {
     await send(unitroller, 'harnessSetXcnRate', [xcnRate]);
 
     return Object.assign(unitroller, { priceOracle, xcn });
+  }
+}
+
+
+async function makeLiquidationProxy(opts = {}) {
+  const {
+    root = saddle.account,
+    kind = 'liquidationproxy'
+  } = opts || {};
+
+  if (kind == 'liquidationproxy') {
+    const liquidationProxy = opts.unitroller || await deploy('NFTLiquidationProxy');
+    const liquidation = await deploy('NFTLiquidation');
+    const priceOracle = opts.priceOracle || await makePriceOracle(opts.priceOracleOpts);
+    const liquidationIncentive = etherMantissa(1);
+    
+    await send(liquidationProxy, '_setPendingImplementation', [liquidation._address]);
+    await send(liquidation, '_become', [liquidationProxy._address]);
+    mergeInterface(liquidationProxy, liquidation);
+    await send(liquidationProxy, '_setComptroller', [comptroller]);
+
+    return Object.assign(unitroller, { priceOracle });
   }
 }
 
@@ -151,7 +173,7 @@ async function makeOToken(opts = {}) {
       break;
     
     case 'oxcn':
-      underlying = await deploy('Xcn', [opts.xcnHolder || root]);
+      underlying = await deploy('Chain');
       oDelegatee = await deploy('OErc20DelegateHarness');
       oDelegator = await deploy('OErc20Delegator',
         [
@@ -214,6 +236,63 @@ async function makeOToken(opts = {}) {
   return Object.assign(oToken, { name, symbol, underlying, comptroller, interestRateModel });
 }
 
+async function makeOTokenEx(opts = {}) {
+  const {
+    root = saddle.account,
+    kind = 'oerc721'
+  } = opts || {};
+
+  const comptroller = opts.comptroller || await makeComptroller(opts.comptrollerOpts);
+  const interestRateModel = opts.interestRateModel || await makeInterestRateModel(opts.interestRateModelOpts);
+  const exchangeRate = etherMantissa(1, 1);
+  const decimals = etherUnsigned(dfn(opts.decimals, 0));
+  const symbol = opts.symbol || 'oOMG';
+  const name = opts.name || `OTokenEx ${symbol}`;
+  const admin = opts.admin || root;
+
+  let oTokenEx, underlying;
+  let oDelegator, oDelegatee;
+
+  switch (kind) {
+    case 'oerc721':
+    default:
+      underlying = opts.underlying || await makeNFTToken(opts.underlyingOpts);
+      oDelegatee = await deploy('OErc721DelegateHarness');
+      oDelegator = await deploy('OErc721Delegator',
+        [
+          underlying._address,
+          comptroller._address,
+          interestRateModel._address,
+          exchangeRate,
+          name,
+          symbol,
+          decimals,
+          admin,
+          oDelegatee._address,
+          "0x0"
+        ]
+      );
+      oTokenEx = await saddle.getContractAt('OErc721DelegateHarness', oDelegator._address);
+      break;
+  }
+
+  if (opts.supportMarket) {
+    await send(comptroller, '_supportMarket', [oTokenEx._address]);
+  }
+
+  if (opts.underlyingPrice) {
+    const price = etherMantissa(opts.underlyingPrice);
+    await send(comptroller.priceOracle, 'setUnderlyingPrice', [oTokenEx._address, price]);
+  }
+
+  if (opts.collateralFactor) {
+    const factor = etherMantissa(opts.collateralFactor);
+    expect(await send(comptroller, '_setCollateralFactor', [oTokenEx._address, factor])).toSucceed();
+  }
+
+  return Object.assign(oTokenEx, { name, symbol, underlying, comptroller, interestRateModel });
+}
+
 async function makeInterestRateModel(opts = {}) {
   const {
     root = saddle.account,
@@ -268,6 +347,19 @@ async function makeToken(opts = {}) {
     const symbol = opts.symbol || 'OMG';
     const name = opts.name || `Erc20 ${symbol}`;
     return await deploy('ERC20Harness', [quantity, name, decimals, symbol]);
+  }
+}
+
+async function makeNFTToken(opts = {}) {
+  const {
+    root = saddle.account,
+    kind = 'erc721'
+  } = opts || {};
+
+  if (kind == 'erc721') {
+    const symbol = opts.symbol || 'OMG';
+    const name = opts.name || `Erc721 ${symbol}`;
+    return await deploy('ERC721Harness', [name, symbol]);
   }
 }
 
@@ -357,6 +449,14 @@ async function preApprove(oToken, from, amount, opts = {}) {
   return send(oToken.underlying, 'approve', [oToken._address, amount], { from });
 }
 
+async function preApproveNFT(oToken, from, tokenId, opts = {}) {
+  if (dfn(opts.faucet, true)) {
+    expect(await send(oToken.underlying, 'harnessMint', [from, tokenId], { from })).toSucceed();
+  }
+
+  return send(oToken.underlying, 'harnessSetApprovalForAll', [from, oToken._address, true], { from });
+}
+
 async function quickMint(oToken, minter, mintAmount, opts = {}) {
   // make sure to accrue interest
   await fastForward(oToken, 1);
@@ -368,6 +468,17 @@ async function quickMint(oToken, minter, mintAmount, opts = {}) {
     expect(await send(oToken, 'harnessSetExchangeRate', [etherMantissa(opts.exchangeRate)])).toSucceed();
   }
   return send(oToken, 'mint', [mintAmount], { from: minter });
+}
+
+async function quickMintNFT(oToken, minter, tokenId, opts = {}) {
+  // make sure to accrue interest
+  await fastForward(oToken, 1);
+
+  if (dfn(opts.approve, true)) {
+    expect(await preApproveNFT(oToken, minter, tokenId, opts)).toSucceed();
+  }
+
+  return send(oToken, 'mint', [tokenId], { from: minter });
 }
 
 async function quickBorrow(oToken, minter, borrowAmount, opts = {}) {
@@ -398,6 +509,12 @@ async function quickRedeem(oToken, redeemer, redeemTokens, opts = {}) {
     expect(await send(oToken, 'harnessSetExchangeRate', [etherMantissa(opts.exchangeRate)])).toSucceed();
   }
   return send(oToken, 'redeem', [redeemTokens], { from: redeemer });
+}
+
+async function quickRedeemNFT(oToken, redeemer, redeemTokenIndex) {
+  await fastForward(oToken, 1);
+
+  return send(oToken, 'redeem', [redeemTokenIndex], { from: redeemer });
 }
 
 async function quickRedeemUnderlying(oToken, redeemer, redeemAmount, opts = {}) {
@@ -436,9 +553,11 @@ async function pretendBorrow(oToken, borrower, accountIndex, marketIndex, princi
 module.exports = {
   makeComptroller,
   makeOToken,
+  makeOTokenEx,
   makeInterestRateModel,
   makePriceOracle,
   makeToken,
+  makeNFTToken,
 
   balanceOf,
   totalSupply,
@@ -453,11 +572,14 @@ module.exports = {
   adjustBalances,
 
   preApprove,
+  preApproveNFT,
   quickMint,
+  quickMintNFT,
   quickBorrow,
 
   preSupply,
   quickRedeem,
+  quickRedeemNFT,
   quickRedeemUnderlying,
 
   setOraclePrice,

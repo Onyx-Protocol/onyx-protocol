@@ -1,0 +1,11 @@
+
+Test "Borrow Not allowed, always reverts"
+    NewComptroller
+    ListedOTokenEx BAYC oBAYC initialExchangeRate:1e18
+    PrepNft Geoff 1 BAYC oBAYC
+    PrepNft Geoff 2 BAYC oBAYC
+    Mint Geoff 1 oBAYC
+    Mint Geoff 2 oBAYC
+    AllowFailures
+    Borrow Torrey 1 oBAYC
+    Assert Revert ""

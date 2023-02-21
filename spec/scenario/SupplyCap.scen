@@ -1,36 +1,36 @@
-Test "Attempt to supply over set cap BEP20"
+Test "Attempt to supply over set cap ERC20"
     NewComptroller price:1.0
     NewOToken ZRX oZRX
-    Comptroller SetMarketSupplyCaps (oZRX) (0.5e18)
+    Comptroller SetMarketCaps (oZRX) (0.5e18) (0.5e18)
     Assert Equal (Comptroller SupplyCaps oZRX) (Exactly 0.5e18)
     Support oZRX collateralFactor:0.5
     Prep Geoff 0.5e18 ZRX oZRX
     AllowFailures
     Mint Geoff 0.5e18 oZRX
     Assert Revert
-    Assert Equal (Bep20 ZRX TokenBalance Geoff) (Exactly 0.5e18)
-    Assert Equal (Bep20 ZRX TokenBalance oZRX) (Exactly 0)
+    Assert Equal (Erc20 ZRX TokenBalance Geoff) (Exactly 0.5e18)
+    Assert Equal (Erc20 ZRX TokenBalance oZRX) (Exactly 0)
 
-Test "Attempt to supply at set cap BEP20"
+Test "Attempt to supply at set cap ERC20"
     NewComptroller price:1.0
     NewOToken ZRX oZRX
     NewOToken BAT oBAT
-    Comptroller SetMarketSupplyCaps (oZRX) (100000000000000000001)
+    Comptroller SetMarketCaps (oZRX) (100000000000000000001) (100000000000000000001)
     Support oZRX collateralFactor:0.5
     Prep Geoff Some ZRX oZRX
     Mint Geoff 100e18 oZRX
-    Assert Equal (Bep20 ZRX TokenBalance Geoff) (Exactly 0)
-    Assert Equal (Bep20 ZRX TokenBalance oZRX) (Exactly 100e18)
+    Assert Equal (Erc20 ZRX TokenBalance Geoff) (Exactly 0)
+    Assert Equal (Erc20 ZRX TokenBalance oZRX) (Exactly 100e18)
 
-Test "Attempt to supply below set cap BEP20"
+Test "Attempt to supply below set cap ERC20"
     NewComptroller price:1.0
     NewOToken ZRX oZRX
-    Comptroller SetMarketSupplyCaps (oZRX) (1e18)
+    Comptroller SetMarketCaps (oZRX) (1e18) (1e18)
     Support oZRX collateralFactor:0.5
     Prep Geoff Some ZRX oZRX
     Mint Geoff 0.5e18 oZRX
-    Assert Equal (Bep20 ZRX TokenBalance Geoff) (Exactly 99.5e18)
-    Assert Equal (Bep20 ZRX TokenBalance oZRX) (Exactly 0.5e18)
+    Assert Equal (Erc20 ZRX TokenBalance Geoff) (Exactly 99.5e18)
+    Assert Equal (Erc20 ZRX TokenBalance oZRX) (Exactly 0.5e18)
 
 Test "Cannot supply more even all underlying is borrowed"
     NewComptroller price:1.0
@@ -38,45 +38,45 @@ Test "Cannot supply more even all underlying is borrowed"
     NewOToken BAT oBAT
     Support oZRX collateralFactor:0.5
     Support oBAT collateralFactor:0.5
-    Comptroller SetMarketSupplyCaps (oZRX) (1e18)
+    Comptroller SetMarketCaps (oZRX) (1e18) (0e18)
     Give oZRX 1e18 ZRX -- Faucet some zrx to borrow
     Prep Robert Some BAT oBAT
     Mint Robert 100e18 oBAT
     EnterMarkets Robert oBAT
     Borrow Robert 1e18 oZRX -- Robert borrows all ZRX
-    Assert Equal (Bep20 ZRX TokenBalance oZRX) (Exactly 0)
+    Assert Equal (Erc20 ZRX TokenBalance oZRX) (Exactly 0)
     Prep Geoff Some ZRX oZRX
     AllowFailures
     Mint Geoff 1 oZRX
     Assert Revert
-    Assert Equal (Bep20 ZRX TokenBalance Geoff) (Exactly Some)
+    Assert Equal (Erc20 ZRX TokenBalance Geoff) (Exactly Some)
 
 Test "Setting supply cap restricted to admin"
     NewComptroller price:1.0
     ListedOToken ZRX oZRX
     SetCollateralFactor oZRX collateralFactor:0.5
     AllowFailures
-    From Robert (Comptroller SetMarketSupplyCaps (oZRX) (0.01e18))
+    From Robert (Comptroller SetMarketCaps (oZRX) (0.01e18) (0.01e18))
     Assert Revert
 
 Test "Supply cap guardian can set supply caps"
     NewComptroller price:1.0
     ListedOToken ZRX oZRX
     SetCollateralFactor oZRX collateralFactor:0.5
-    Comptroller SetSupplyCapGuardian Geoff
-    From Geoff (Comptroller SetMarketSupplyCaps (oZRX) (0.5e18))
+    Comptroller SetMarketCapGuardian Geoff
+    From Geoff (Comptroller SetMarketCaps (oZRX) (0.5e18) (0.5e18))
     Assert Equal (Comptroller SupplyCaps oZRX) (Exactly 0.5e18)
-    Assert Equal (Comptroller SupplyCapGuardian) (User Geoff Address)
+    Assert Equal (Comptroller MarketCapGuardian) (User Geoff Address)
     AllowFailures
-    From Robert (Comptroller SetMarketSupplyCaps (oZRX) (0.01e18)) -- Robert still can't...
+    From Robert (Comptroller SetMarketCaps (oZRX) (0.01e18) (0.01e18)) -- Robert still can't...
     Assert Revert
-    From Robert (Comptroller SetMarketSupplyCaps (oZRX) (0.01e18))
+    From Robert (Comptroller SetMarketCaps (oZRX) (0.01e18) (0.01e18))
     Assert Revert
 
 Test "Only admin can set Supply Cap Guardian"
     NewComptroller price:1.0
     AllowFailures
-    From Robert (Comptroller SetSupplyCapGuardian Robert) -- Robert has really gone rogue
+    From Robert (Comptroller SetMarketCapGuardian Robert) -- Robert has really gone rogue
     Assert Revert
 
 Test "Reserves should not affect supply cap"
@@ -86,16 +86,16 @@ Test "Reserves should not affect supply cap"
     Prep Geoff Some USDC oUSDC
     Mint Geoff 14e18 oUSDC
     AddReserves 1e18 oUSDC Geoff
-    Assert Equal (Bep20 USDC TokenBalance oUSDC) (Exactly 15e18)
+    Assert Equal (Erc20 USDC TokenBalance oUSDC) (Exactly 15e18)
     Assert Equal (OToken oUSDC Reserves) (Exactly 1e18)
     -- Current supply level should exclude reserves, which should be 15e18 - 1e18 = 14e18.
     --   Setting supply caps to 14e18 should block users from supplying.
-    Comptroller SetMarketSupplyCaps (oUSDC) (14e18)
+    Comptroller SetMarketCaps (oUSDC) (14e18) (14e18)
     AllowFailures
     Mint Geoff 1 oUSDC
     Assert Revert
     Successfully
-    Comptroller SetMarketSupplyCaps (oUSDC) (15e18)
+    Comptroller SetMarketCaps (oUSDC) (15e18) (15e18)
     Mint Geoff 999999999999999999 oUSDC
 
 Test "SetBorrowCaps works correctly too"
@@ -103,7 +103,7 @@ Test "SetBorrowCaps works correctly too"
     NewOToken ZRX oZRX
     NewOToken BAT oBAT
     NewOToken USDC oUSDC
-    Comptroller SetMarketBorrowCaps (oBAT oUSDC) (0.5e18 1000001)
+    Comptroller SetMarketCaps (oBAT oUSDC) (0 0) (0.5e18 1000001)
     Assert Equal (Comptroller BorrowCaps oBAT) (Exactly 0.5e18)
     Assert Equal (Comptroller BorrowCaps oUSDC) (Exactly 1000001)
     Give oBAT 10e18 BAT -- Faucet some bat to borrow
@@ -122,6 +122,6 @@ Test "SetBorrowCaps works correctly too"
     Successfully
     Borrow Geoff 1e6 oUSDC
     Assert Equal (oToken oBAT BorrowBalance Geoff) (Exactly 0)
-    Assert Equal (Bep20 BAT TokenBalance Geoff) (Exactly 0)
-    Assert Equal (Bep20 BAT TokenBalance oBAT) (Exactly 10e18)
-    Assert Equal (Bep20 USDC TokenBalance Geoff) (Exactly 1e6)
+    Assert Equal (Erc20 BAT TokenBalance Geoff) (Exactly 0)
+    Assert Equal (Erc20 BAT TokenBalance oBAT) (Exactly 10e18)
+    Assert Equal (Erc20 USDC TokenBalance Geoff) (Exactly 1e6)
