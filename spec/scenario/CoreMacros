@@ -6,6 +6,13 @@ Macro Successfully
 Macro AllowFailures
     ClearInvariants Success
 
+Macro NewNFTLiquidationProxy
+    NFTLiquidationProxy Deploy
+    NFTLiquidationImpl Deploy Scenario NFTLiquidationScen
+    NFTLiquidationProxy SetPendingImpl NFTLiquidationScen
+    NFTLiquidationImpl NFTLiquidationScen Become
+    NFTLiquidation Initialize
+
 Macro PricedComptroller closeFactor=0.1 maxAssets=20
     Unitroller Deploy
     PriceOracle Deploy Simple
@@ -16,6 +23,9 @@ Macro PricedComptroller closeFactor=0.1 maxAssets=20
     ComptrollerImpl Deploy Scenario ScenComptroller
     Unitroller SetPendingImpl ScenComptroller
     ComptrollerImpl ScenComptroller Become
+    NewNFTLiquidationProxy
+    Comptroller Send "setLiquidationProxyAddress(address)" (Address NFTLiquidationProxy)
+    NFTLiquidation SetComptroller (Address Unitroller)
 
 Macro NewComptroller price=1.0 closeFactor=0.1 maxAssets=20
     --g1
@@ -52,6 +62,12 @@ Macro NewOToken erc20 oToken borrowRate=0.000005 initialExchangeRate=2e9 decimal
     OTokenDelegate Deploy oTokenType oErc20Delegate
     OToken Deploy delegatorType oToken oToken (Erc20 erc20 Address) (Comptroller Address) (InterestRateModel StdInterest Address) initialExchangeRate decimals admin (OTokenDelegate oErc20Delegate Address) becomeImplementationData
 
+Macro NewOTokenEx erc721 oTokenEx borrowRate=0.000005 initialExchangeRate=1e18 decimals=0 tokenType=Standard delegatorType=OErc721DelegatorScenario oTokenExType=OErc721DelegateScenario admin=Admin becomeImplementationData="0x0"
+    Erc721 Deploy tokenType erc721 erc721
+    InterestRateModel Deploy Fixed StdInterest borrowRate -- Note: interest rate model probably shouldn't be global
+    OTokenExDelegate Deploy oTokenExType oErc721Delegate
+    OTokenEx Deploy delegatorType oTokenEx oTokenEx (Erc721 erc721 Address) (Comptroller Address) (InterestRateModel StdInterest Address) initialExchangeRate decimals admin (OTokenExDelegate oErc721Delegate Address) becomeImplementationData
+
 -- Same as NewOToken but does not deploy an ERC20. Used for special ERC20s that are initialized differently
 Macro NewOTokenBringERC20 erc20 oToken borrowRate=0.000005 initialExchangeRate=2e9 decimals=8 delegatorType=OErc20DelegatorScenario oTokenType=OErc20DelegateScenario admin=Admin becomeImplementationData="0x0"
     InterestRateModel Deploy Fixed StdInterest borrowRate -- Note: interest rate model probably shouldn't be global
@@ -70,6 +86,10 @@ Macro NewEtherToken oToken borrowRate=0.000005 initialExchangeRate=2e9 decimals=
 Macro ListedOToken erc20 oToken borrowRate=0.000005 initialExchangeRate=2e9 decimals=8 tokenType=Standard delegatorType=OErc20DelegatorScenario oTokenType=OErc20DelegateScenario admin=Admin
     NewOToken erc20 oToken borrowRate initialExchangeRate decimals tokenType delegatorType oTokenType admin
     Comptroller SupportMarket oToken
+
+Macro ListedOTokenEx erc721 oTokenEx borrowRate=0.000005 initialExchangeRate=1e18 decimals=0 tokenType=Standard delegatorType=OErc721Delegator oTokenType=OErc721Delegate admin=Admin
+    NewOTokenEx erc721 oTokenEx borrowRate initialExchangeRate decimals tokenType delegatorType oTokenType admin
+    Comptroller SupportMarket oTokenEx
 
 Macro ListedOTokenImmutable erc20 oToken borrowRate=0.000005 initialExchangeRate=2e9 decimals=8 tokenType=Standard oTokenType=Scenario admin=Admin
     NewOTokenImmutable erc20 oToken borrowRate initialExchangeRate decimals tokenType oTokenType admin
@@ -100,6 +120,10 @@ Macro Prep user amount erc20 token allowanceAmount=Nothing
     Erc20 erc20 Faucet user amount
     From user (Erc20 erc20 Approve token (Default allowanceAmount amount))
 
+Macro PrepNft user tokenId erc721 to isApproved=true
+    Erc721 erc721 Faucet user tokenId
+    From user (Erc721 erc721 ApprovalForAll to isApproved)
+
 Macro Allow user token
     From user (Erc20 (OToken token Underlying) Approve token UInt256Max)
 
@@ -108,6 +132,9 @@ Macro AccrueInterest token
 
 Macro Mint user amount token
     From user (OToken token Mint amount)
+
+Macro MintEx user tokenId token
+    From user (OTokenEx token Mint tokenId)
 
 Macro SendMintEth user amount token
     From user (Trx GasPrice 0 (Trx Value amount (Send token amount)))

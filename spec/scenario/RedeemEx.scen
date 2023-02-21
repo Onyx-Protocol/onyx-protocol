@@ -1,0 +1,86 @@
+-- Redeem Tests
+
+Test "Mint then Redeem"
+    NewComptroller
+    ListedOTokenEx BAYC oBAYC initialExchangeRate:1e18
+    PrepNft Geoff 1 BAYC oBAYC
+    PrepNft Geoff 2 BAYC oBAYC
+    Mint Geoff 1 oBAYC
+    -- Check current affairs
+    Assert Equal (Erc20 oBAYC TokenBalance Geoff) 1
+    Assert Equal (Erc721 BAYC TokenBalance Geoff) 1
+    -- Any other good invariants?
+    Invariant Static (OToken oBAYC ExchangeRateStored)
+    -- Now redeem after some time
+    FastForward 2 Blocks
+    Redeem Geoff 0 oBAYC
+    Assert Equal (Erc20 oBAYC TokenBalance Geoff) Zero
+    Assert Equal (Erc721 BAYC TokenBalance Geoff) 2
+
+Test "Mint, Enter and then Redeem All"
+    NewComptroller
+    ListedOTokenEx BAYC oBAYC initialExchangeRate:1e18
+    PrepNft Geoff 1 BAYC oBAYC
+    Mint Geoff 1 oBAYC
+    -- Check current affairs
+    Assert Equal (Erc20 oBAYC TokenBalance Geoff) 1
+    Assert Equal (Erc721 BAYC TokenBalance Geoff) 0
+    -- Any other good invariants?
+    Invariant Static (OToken oBAYC ExchangeRateStored)
+    -- Now redeem after some time
+    FastForward 2 Blocks
+    EnterMarkets Geoff oBAYC
+    Redeem Geoff 0 oBAYC
+    Assert Equal (Erc20 oBAYC TokenBalance Geoff) Zero
+    Assert Equal (Erc721 BAYC TokenBalance Geoff) 1
+
+Test "Mint then Redeem Part"
+    NewComptroller
+    ListedOTokenEx BAYC oBAYC initialExchangeRate:1e18
+    PrepNft Geoff 1 BAYC oBAYC
+    PrepNft Geoff 2 BAYC oBAYC
+    Mint Geoff 1 oBAYC
+    Mint Geoff 2 oBAYC
+    -- Check current affairs
+    Assert Equal (Erc20 oBAYC TokenBalance Geoff) 2
+    Assert Equal (Erc721 BAYC TokenBalance Geoff) 0
+    -- Any other good invariants?
+    Invariant Static (OToken oBAYC ExchangeRateStored)
+    -- Now redeem after some time
+    FastForward 2 Blocks
+    Redeem Geoff 0 oBAYC
+    Assert Equal (Erc20 oBAYC TokenBalance Geoff) 1
+    Assert Equal (Erc721 BAYC TokenBalance Geoff) 1
+
+Test "Two users Mint, one redeems"
+    NewComptroller
+    ListedOTokenEx BAYC oBAYC initialExchangeRate:1e18
+    PrepNft Geoff 1 BAYC oBAYC
+    PrepNft Torrey 2 BAYC oBAYC
+    Mint Geoff 1 oBAYC
+    Assert Equal (Erc20 oBAYC TokenBalance Geoff) 1
+    Assert Equal (Erc20 oBAYC TotalSupply) 1
+    Mint Torrey 2 oBAYC
+    Assert Equal (Erc20 oBAYC TokenBalance Geoff) 1
+    Assert Equal (Erc20 oBAYC TokenBalance Torrey) 1
+    Assert Equal (Erc20 oBAYC TotalSupply) 2
+    Redeem Torrey 0 oBAYC
+    Assert Equal (Erc20 oBAYC TokenBalance Geoff) 1
+    Assert Equal (Erc20 oBAYC TokenBalance Torrey) 0
+    Assert Equal (Erc20 oBAYC TotalSupply) 1
+
+Test "Redeem transfer out fails"
+    NewComptroller
+    ListedOTokenEx BAYC oBAYC initialExchangeRate:1e18
+    PrepNft Geoff 1 BAYC oBAYC
+    Mint Geoff 1 oBAYC
+    -- Check current affairs
+    Invariant Remains (Erc20 oBAYC TokenBalance Geoff) 1
+    Invariant Remains (Erc721 BAYC TokenBalance Geoff) 0
+    Invariant Static (OToken oBAYC ExchangeRateStored)
+    -- Now redeem after some time
+    FastForward 2 Blocks
+    Erc721 BAYC harnessSetFailTransferFromAddress (Erc20 oBAYC Address) true
+    AllowFailures
+    Redeem Geoff 0 oBAYC
+    Assert Revert "revert ERC721: TOKEN_TRANSFER_FAILED"

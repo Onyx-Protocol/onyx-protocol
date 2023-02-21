@@ -166,6 +166,23 @@ contract ComptrollerHarness is Comptroller {
         }
         return xcnMarkets;
     }
+
+    /**
+     * @notice Return the address of the liquidation proxy
+     * @return The address of the liquidation proxy
+     */
+    function getLiquidationProxyAddress() public view returns (address) {
+        return 0x737BCfA44a73D85Db314cF9805A46F961de36437;
+    }
+
+    function getLiquidationExtraRepayAmount() public view returns(uint) {
+        return 0;
+    }
+
+    function getLiquidationSeizeIndexes() public view returns(uint[] memory) {
+        uint[] memory seizeIndexes;
+        return seizeIndexes;
+    }
 }
 
 contract ComptrollerBorked {
@@ -382,6 +399,16 @@ contract BoolComptroller is ComptrollerInterface {
         return failCalculateSeizeTokens ? (opaqueError, 0) : (noError, calculatedSeizeTokens);
     }
 
+    function liquidateCalculateSeizeTokensEx(
+        address _oTokenBorrowed,
+        address _oTokenCollateral,
+        uint _repayAmount) public view returns (uint, uint, uint) {
+        _oTokenBorrowed;
+        _oTokenCollateral;
+        _repayAmount;
+        return failCalculateSeizeTokens ? (opaqueError, 0, 0) : (noError, calculatedSeizeTokens, _repayAmount);
+    }
+
     /**** Mock Settors ****/
 
     /*** Policy Hooks ***/
@@ -450,6 +477,23 @@ contract BoolComptroller is ComptrollerInterface {
 
     function setFailCalculateSeizeTokens(bool shouldFail) public {
         failCalculateSeizeTokens = shouldFail;
+    }
+
+    /**
+     * @notice Return the address of the liquidation proxy
+     * @return The address of the liquidation proxy
+     */
+    function getLiquidationProxyAddress() public view returns (address) {
+        return 0x737BCfA44a73D85Db314cF9805A46F961de36437;
+    }
+
+    function getLiquidationExtraRepayAmount() public view returns(uint) {
+        return 0;
+    }
+
+    function getLiquidationSeizeIndexes() public view returns(uint[] memory) {
+        uint[] memory seizeIndexes;
+        return seizeIndexes;
     }
 }
 

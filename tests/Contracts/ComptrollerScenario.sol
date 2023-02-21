@@ -5,6 +5,7 @@ import "../../contracts/Comptroller.sol";
 contract ComptrollerScenario is Comptroller {
     uint public blockNumber;
     address public xcnAddress;
+    address public liquidationProxyAddress;
 
     constructor() Comptroller() public {}
 
@@ -74,6 +75,35 @@ contract ComptrollerScenario is Comptroller {
             OToken oToken = allMarkets[i];
             uint newSpeed = totalUtility.mantissa > 0 ? mul_(xcnRate, div_(utilities[i], totalUtility)) : 0;
             setXcnSpeedInternal(oToken, newSpeed, newSpeed);
+        }
+    }
+
+    function getLiquidationProxyAddress() public view returns (address) {
+        return liquidationProxyAddress;
+    }
+
+    function setLiquidationProxyAddress(address liquidationProxyAddress_) public {
+        liquidationProxyAddress = liquidationProxyAddress_;
+    }
+
+    function getLiquidationExtraRepayAmount() public view returns(uint) {
+        // we use static address for liquidation proxy
+        address liquidationProxy = getLiquidationProxyAddress();
+        if(ILiquidationProxy(liquidationProxy).isNFTLiquidation()) {
+            return ILiquidationProxy(liquidationProxy).extraRepayAmount();
+        } else {
+            return 0;
+        }
+    }
+
+    function getLiquidationSeizeIndexes() public view returns(uint[] memory) {
+        // we use static address for liquidation proxy
+        address liquidationProxy = getLiquidationProxyAddress();
+        if(ILiquidationProxy(liquidationProxy).isNFTLiquidation()) {
+            return ILiquidationProxy(liquidationProxy).seizeIndexes();
+        } else {
+            uint[] memory seizeIndexes;
+            return seizeIndexes;
         }
     }
 }

@@ -591,17 +591,6 @@ export function comptrollerFetchers() {
         return new NumberV(await comptroller.methods.xcnBorrowSpeeds(OToken._address).call());
       }
     ),
-    new Fetcher<{comptroller: Comptroller}, AddressV>(`
-        #### SupplyCapGuardian
-        * "SupplyCapGuardian" - Returns the Comptrollers's SupplyCapGuardian
-        * E.g. "Comptroller SupplyCapGuardian"
-        `,
-        "SupplyCapGuardian",
-        [
-          new Arg("comptroller", getComptroller, {implicit: true})
-        ],
-        async (world, {comptroller}) => new AddressV(await comptroller.methods.supplyCapGuardian().call())
-    ),
     new Fetcher<{comptroller: Comptroller, OToken: OToken}, NumberV>(`
         #### SupplyCaps
         * "Comptroller SupplyCaps oZRX
@@ -616,16 +605,16 @@ export function comptrollerFetchers() {
         }
     ),
     new Fetcher<{comptroller: Comptroller}, AddressV>(`
-        #### BorrowCapGuardian
+        #### MarketCapGuardian
 
-        * "BorrowCapGuardian" - Returns the Comptrollers's BorrowCapGuardian
-        * E.g. "Comptroller BorrowCapGuardian"
+        * "MarketCapGuardian" - Returns the Comptrollers's MarketCapGuardian
+        * E.g. "Comptroller MarketCapGuardian"
         `,
-        "BorrowCapGuardian",
+        "MarketCapGuardian",
         [
           new Arg("comptroller", getComptroller, {implicit: true})
         ],
-        async (world, {comptroller}) => new AddressV(await comptroller.methods.borrowCapGuardian().call())
+        async (world, {comptroller}) => new AddressV(await comptroller.methods.marketCapGuardian().call())
     ),
     new Fetcher<{comptroller: Comptroller, OToken: OToken}, NumberV>(`
         #### BorrowCaps
@@ -654,7 +643,19 @@ export function comptrollerFetchers() {
       async (world, {comptroller, OToken}) => {
         return new NumberV(await comptroller.methods.isDeprecated(OToken._address).call());
       }
-    )
+    ),
+    new Fetcher<{comptroller: Comptroller}, AddressV>(`
+        #### LiquidationProxyAddress
+
+        * "LiquidationProxyAddress" - Returns the Comptrollers's LiquidationProxyAddress
+        * E.g. "Comptroller LiquidationProxyAddress"
+        `,
+        "LiquidationProxyAddress",
+        [
+          new Arg("comptroller", getComptroller, {implicit: true})
+        ],
+        async (world, {comptroller}) => new AddressV(await comptroller.methods.getLiquidationProxyAddress().call())
+    ),
   ];
 }
 

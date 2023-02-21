@@ -21,9 +21,15 @@ import { getUserValue, userFetchers } from './Value/UserValue';
 import { comptrollerFetchers, getComptrollerValue } from './Value/ComptrollerValue';
 import { comptrollerImplFetchers, getComptrollerImplValue } from './Value/ComptrollerImplValue';
 import { getUnitrollerValue, unitrollerFetchers } from './Value/UnitrollerValue';
+import { nftLiquidationFetchers, getNFTLiquidationValue } from './Value/NFTLiquidationValue';
+import { nftLiquidationImplFetchers, getNFTLiquidationImplValue } from './Value/NFTLiquidationImplValue';
+import { getNFTLiquidationProxyValue, nftLiquidationProxyFetchers } from './Value/NFTLiquidationProxyValue';
 import { oTokenFetchers, getOTokenValue } from './Value/OTokenValue';
 import { oTokenDelegateFetchers, getOTokenDelegateValue } from './Value/OTokenDelegateValue';
 import { erc20Fetchers, getErc20Value } from './Value/Erc20Value';
+import { oTokenExFetchers, getOTokenExValue } from './Value/OTokenExValue';
+import { oTokenExDelegateFetchers, getOTokenExDelegateValue } from './Value/OTokenExDelegateValue';
+import { erc721Fetchers, getErc721Value } from './Value/Erc721Value';
 import { mcdFetchers, getMCDValue } from './Value/MCDValue';
 import { getInterestRateModelValue, interestRateModelFetchers } from './Value/InterestRateModelValue';
 import { getPriceOracleValue, priceOracleFetchers } from './Value/PriceOracleValue';
@@ -856,6 +862,39 @@ const fetchers = [
   ),
   new Fetcher<{ res: Value }, Value>(
     `
+      #### NFTLiquidationProxy
+
+      * "NFTLiquidationProxy ...NFTLiquidationProxyArgs" - Returns nftLiquidationProxy value
+    `,
+    'NFTLiquidationProxy',
+    [new Arg('res', getNFTLiquidationProxyValue, { variadic: true })],
+    async (world, { res }) => res,
+    { subExpressions: nftLiquidationProxyFetchers() }
+  ),
+  new Fetcher<{ res: Value }, Value>(
+    `
+      #### NFTLiquidation
+
+      * "NFTLiquidation ...NFTLiquidationArgs" - Returns nftLiquidation value
+    `,
+    'NFTLiquidation',
+    [new Arg('res', getNFTLiquidationValue, { variadic: true })],
+    async (world, { res }) => res,
+    { subExpressions: nftLiquidationFetchers() }
+  ),
+  new Fetcher<{ res: Value }, Value>(
+    `
+      #### NFTLiquidationImpl
+
+      * "NFTLiquidationImpl ...nftLiquidationImplArgs" - Returns nftLiquidation implementation value
+    `,
+    'NFTLiquidation',
+    [new Arg('res', getNFTLiquidationImplValue, { variadic: true })],
+    async (world, { res }) => res,
+    { subExpressions: nftLiquidationImplFetchers() }
+  ),
+  new Fetcher<{ res: Value }, Value>(
+    `
       #### OToken
 
       * "OToken ...oTokenArgs" - Returns oToken value
@@ -886,6 +925,39 @@ const fetchers = [
     [new Arg('res', getErc20Value, { variadic: true })],
     async (world, { res }) => res,
     { subExpressions: erc20Fetchers() }
+  ),
+  new Fetcher<{ res: Value }, Value>(
+    `
+      #### OTokenEx
+
+      * "OTokenEx ...oTokenExArgs" - Returns oTokenEx value
+    `,
+    'OTokenEx',
+    [new Arg('res', getOTokenExValue, { variadic: true })],
+    async (world, { res }) => res,
+    { subExpressions: oTokenExFetchers() }
+  ),
+  new Fetcher<{ res: Value }, Value>(
+    `
+      #### OTokenExDelegate
+
+      * "OTokenExDelegate ...oTokenExDelegateArgs" - Returns oTokenEx delegate value
+    `,
+    'OTokenExDelegate',
+    [new Arg('res', getOTokenExDelegateValue, { variadic: true })],
+    async (world, { res }) => res,
+    { subExpressions: oTokenExDelegateFetchers() }
+  ),
+  new Fetcher<{ res: Value }, Value>(
+    `
+      #### Erc721
+
+      * "Erc721 ...erc721Args" - Returns Erc721 value
+    `,
+    'Erc721',
+    [new Arg('res', getErc721Value, { variadic: true })],
+    async (world, { res }) => res,
+    { subExpressions: erc721Fetchers() }
   ),
   new Fetcher<{ res: Value }, Value>(
     `
