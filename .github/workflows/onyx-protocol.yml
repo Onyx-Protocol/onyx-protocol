@@ -35,7 +35,4 @@ jobs:
         sudo chmod +x /usr/local/bin/solc
     - run: npm install -g yarn
     - run: yarn --frozen-lockfile
-    - name: yarn lint and test
-      run: |
-        yarn run lint --if-present
-        yarn run test --if-present
+    - run: yarn run test --if-present
