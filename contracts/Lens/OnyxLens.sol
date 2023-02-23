@@ -266,7 +266,7 @@ contract OnyxLens is ExponentialNoError {
         uint underlyingPrice;
     }
 
-    function oTokenUnderlyingPrice(OToken oToken) public returns (OTokenUnderlyingPrice memory) {
+    function oTokenUnderlyingPrice(OToken oToken) public view returns (OTokenUnderlyingPrice memory) {
         ComptrollerLensInterface comptroller = ComptrollerLensInterface(address(oToken.comptroller()));
         PriceOracle priceOracle = comptroller.oracle();
 
@@ -276,7 +276,7 @@ contract OnyxLens is ExponentialNoError {
         });
     }
 
-    function oTokenUnderlyingPriceAll(OToken[] calldata oTokens) external returns (OTokenUnderlyingPrice[] memory) {
+    function oTokenUnderlyingPriceAll(OToken[] calldata oTokens) external view returns (OTokenUnderlyingPrice[] memory) {
         uint oTokenCount = oTokens.length;
         OTokenUnderlyingPrice[] memory res = new OTokenUnderlyingPrice[](oTokenCount);
         for (uint i = 0; i < oTokenCount; i++) {
@@ -291,9 +291,9 @@ contract OnyxLens is ExponentialNoError {
         uint shortfall;
     }
 
-    function getAccountLimits(ComptrollerLensInterface comptroller, address account) public returns (AccountLimits memory) {
+    function getAccountLimits(ComptrollerLensInterface comptroller, address account) public view returns (AccountLimits memory) {
         (uint errorCode, uint liquidity, uint shortfall) = comptroller.getAccountLiquidity(account);
-        require(errorCode == 0);
+        require(errorCode == 0, "invalid account liquidity");
 
         return AccountLimits({
             markets: comptroller.getAssetsIn(account),
@@ -685,7 +685,7 @@ contract OnyxLens is ExponentialNoError {
     ) internal view returns (uint) {
         Double memory supplyIndex = Double({ mantissa: supplyState.index });
         Double memory supplierIndex = Double({ mantissa: comptroller.xcnSupplierIndex(oToken, supplier) });
-        if (supplierIndex.mantissa == 0 && supplyIndex.mantissa > 0) {
+        if (supplierIndex.mantissa == 0 && supplyIndex.mantissa >= comptroller.xcnInitialIndex()) {
             supplierIndex.mantissa = comptroller.xcnInitialIndex();
         }
 

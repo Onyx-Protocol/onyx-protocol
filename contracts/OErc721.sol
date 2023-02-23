@@ -245,11 +245,9 @@ contract OErc721 is OTokenEx, OErc721Interface {
     }
 
     function doTransfer(address from, address to, uint tokenIndex) internal {
-        require(userTokens[from].length > tokenIndex, "invalid token index");
-
         // doTransferOut
         uint newBalance = userTokens[from].length - 1;
-        require(tokenIndex <= newBalance);
+        require(tokenIndex <= newBalance, "invalid token index");
         uint tokenId = userTokens[from][tokenIndex];
         if (tokenIndex < newBalance) {
             userTokens[from][tokenIndex] = userTokens[from][newBalance];
