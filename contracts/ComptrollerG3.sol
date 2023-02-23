@@ -1389,6 +1389,6 @@ contract ComptrollerG3 is ComptrollerV3Storage, ComptrollerInterface, Comptrolle
      * @return The address of XCN
      */
     function getXcnAddress() public view returns (address) {
-        return 0xA2cd3D43c775978A96BdBf12d733D5A1ED94fb18;
+        return 0xc03Fa5e041BE9C8deD030D6dec7936cE67D78ae8;
     }
 }

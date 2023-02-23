@@ -545,6 +545,12 @@ contract OnyxLens is ExponentialNoError {
         return c;
     }
 
+    struct DailyXCNLocalVars {
+        uint dailyXcnPerAccount;
+        uint dailyXcnSupplyMarket;
+        uint dailyXcnBorrowMarket;
+    }
+
     /**
      * @notice Get amount of XCN distributed daily to an account
      * @param account Address of account to fetch the daily XCN distribution
@@ -554,12 +560,14 @@ contract OnyxLens is ExponentialNoError {
     function getDailyXCN(address payable account, address comptrollerAddress) external returns (uint) {
         ComptrollerLensInterface comptrollerInstance = ComptrollerLensInterface(comptrollerAddress);
         OToken[] memory oTokens = comptrollerInstance.getAllMarkets();
-        uint dailyXcnPerAccount = 0;
+        DailyXCNLocalVars memory vars;
 
         for (uint i = 0; i < oTokens.length; i++) {
             OToken oToken = oTokens[i];
             // valid oTokens
-            {
+            (bool isMarketListed, ) = comptrollerInstance.markets(address(oToken));
+
+            if(isMarketListed) {
                 OTokenMetadata memory metaDataItem = oTokenMetadata(oToken);
 
                 //get balanceOfUnderlying and borrowBalanceCurrent from oTokenBalance
@@ -570,29 +578,29 @@ contract OnyxLens is ExponentialNoError {
                 Exp memory underlyingPriceMantissa = Exp({ mantissa: underlyingPrice });
 
                 //get dailyXcnSupplyMarket
-                uint dailyXcnSupplyMarket = 0;
+                vars.dailyXcnSupplyMarket = 0;
                 uint supplyInUsd = mul_ScalarTruncate(underlyingPriceMantissa, oTokenBalanceInfo.balanceOfUnderlying);
                 uint marketTotalSupply = (metaDataItem.totalSupply.mul(metaDataItem.exchangeRateCurrent)).div(1e18);
                 uint marketTotalSupplyInUsd = mul_ScalarTruncate(underlyingPriceMantissa, marketTotalSupply);
 
                 if (marketTotalSupplyInUsd > 0) {
-                    dailyXcnSupplyMarket = (metaDataItem.dailySupplyXcn.mul(supplyInUsd)).div(marketTotalSupplyInUsd);
+                    vars.dailyXcnSupplyMarket = (metaDataItem.dailySupplyXcn.mul(supplyInUsd)).div(marketTotalSupplyInUsd);
                 }
 
                 //get dailyXcnBorrowMarket
-                uint dailyXcnBorrowMarket = 0;
+                vars.dailyXcnBorrowMarket = 0;
                 uint borrowsInUsd = mul_ScalarTruncate(underlyingPriceMantissa, oTokenBalanceInfo.borrowBalanceCurrent);
                 uint marketTotalBorrowsInUsd = mul_ScalarTruncate(underlyingPriceMantissa, metaDataItem.totalBorrows);
 
                 if (marketTotalBorrowsInUsd > 0) {
-                    dailyXcnBorrowMarket = (metaDataItem.dailyBorrowXcn.mul(borrowsInUsd)).div(marketTotalBorrowsInUsd);
+                    vars.dailyXcnBorrowMarket = (metaDataItem.dailyBorrowXcn.mul(borrowsInUsd)).div(marketTotalBorrowsInUsd);
                 }
 
-                dailyXcnPerAccount += dailyXcnSupplyMarket + dailyXcnBorrowMarket;
+                vars.dailyXcnPerAccount += vars.dailyXcnSupplyMarket + vars.dailyXcnBorrowMarket;
             }
         }
 
-        return dailyXcnPerAccount;
+        return vars.dailyXcnPerAccount;
     }
 
     struct ClaimXcnLocalVariables {
@@ -724,26 +732,30 @@ contract OnyxLens is ExponentialNoError {
         OToken[] memory oTokens = comptroller.getAllMarkets();
         ClaimXcnLocalVariables memory vars;
         for (uint i = 0; i < oTokens.length; i++) {
-            (vars.borrowIndex, vars.borrowBlock) = comptroller.xcnBorrowState(address(oTokens[i]));
-            XcnMarketState memory borrowState = XcnMarketState({
-                index: vars.borrowIndex,
-                block: vars.borrowBlock
-            });
+            (bool isMarketListed, ) = comptroller.markets(address(oTokens[i]));
 
-            (vars.supplyIndex, vars.supplyBlock) = comptroller.xcnSupplyState(address(oTokens[i]));
-            XcnMarketState memory supplyState = XcnMarketState({
-                index: vars.supplyIndex,
-                block: vars.supplyBlock
-            });
+            if(isMarketListed) {
+                (vars.borrowIndex, vars.borrowBlock) = comptroller.xcnBorrowState(address(oTokens[i]));
+                XcnMarketState memory borrowState = XcnMarketState({
+                    index: vars.borrowIndex,
+                    block: vars.borrowBlock
+                });
 
-            Exp memory borrowIndex = Exp({ mantissa: oTokens[i].borrowIndex() });
-            updateXcnBorrowIndex(borrowState, address(oTokens[i]), borrowIndex, comptroller);
-            uint reward = distributeBorrowerXcn(borrowState, address(oTokens[i]), holder, borrowIndex, comptroller);
-            vars.totalRewards = add_(vars.totalRewards, reward);
+                (vars.supplyIndex, vars.supplyBlock) = comptroller.xcnSupplyState(address(oTokens[i]));
+                XcnMarketState memory supplyState = XcnMarketState({
+                    index: vars.supplyIndex,
+                    block: vars.supplyBlock
+                });
 
-            updateXcnSupplyIndex(supplyState, address(oTokens[i]), comptroller);
-            reward = distributeSupplierXcn(supplyState, address(oTokens[i]), holder, comptroller);
-            vars.totalRewards = add_(vars.totalRewards, reward);
+                Exp memory borrowIndex = Exp({ mantissa: oTokens[i].borrowIndex() });
+                updateXcnBorrowIndex(borrowState, address(oTokens[i]), borrowIndex, comptroller);
+                uint reward = distributeBorrowerXcn(borrowState, address(oTokens[i]), holder, borrowIndex, comptroller);
+                vars.totalRewards = add_(vars.totalRewards, reward);
+
+                updateXcnSupplyIndex(supplyState, address(oTokens[i]), comptroller);
+                reward = distributeSupplierXcn(supplyState, address(oTokens[i]), holder, comptroller);
+                vars.totalRewards = add_(vars.totalRewards, reward);
+            }
         }
         return add_(comptroller.xcnAccrued(holder), vars.totalRewards);
     }

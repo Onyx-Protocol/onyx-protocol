@@ -32,6 +32,9 @@ contract OErc721Delegator is OTokenInterface, OErc721Interface, ODelegatorInterf
                 address payable admin_,
                 address implementation_,
                 bytes memory becomeImplementationData) public {
+        require(admin_ != address(0), "invalid admin address");
+        require(implementation_ != address(0), "invalid implementation address");
+
         // Creator of the contract is admin during initialization
         admin = msg.sender;
 
@@ -59,6 +62,8 @@ contract OErc721Delegator is OTokenInterface, OErc721Interface, ODelegatorInterf
      * @param becomeImplementationData The encoded bytes data to be passed to _becomeImplementation
      */
     function _setImplementation(address implementation_, bool allowResign, bytes memory becomeImplementationData) public {
+        require(implementation_ != address(0), "invalid implementation address");
+
         require(msg.sender == admin, "OErc721Delegator::_setImplementation: Caller must be admin");
 
         if (allowResign) {
@@ -389,26 +394,6 @@ contract OErc721Delegator is OTokenInterface, OErc721Interface, ODelegatorInterf
     }
 
     /**
-     * @notice Accrues interest and adds reserves by transferring from admin
-     * @param addAmount Amount of reserves to add
-     * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
-     */
-    function _addReserves(uint addAmount) external returns (uint) {
-        bytes memory data = delegateToImplementation(abi.encodeWithSignature("_addReserves(uint256)", addAmount));
-        return abi.decode(data, (uint));
-    }
-
-    /**
-     * @notice Accrues interest and reduces reserves by transferring to admin
-     * @param reduceAmount Amount of reduction to reserves
-     * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
-     */
-    function _reduceReserves(uint reduceAmount) external returns (uint) {
-        bytes memory data = delegateToImplementation(abi.encodeWithSignature("_reduceReserves(uint256)", reduceAmount));
-        return abi.decode(data, (uint));
-    }
-
-    /**
      * @notice Accrues interest and updates the interest rate model using _setInterestRateModelFresh
      * @dev Admin function to accrue interest and update the interest rate model
      * @param newInterestRateModel the new interest rate model to use
@@ -417,10 +402,6 @@ contract OErc721Delegator is OTokenInterface, OErc721Interface, ODelegatorInterf
     function _setInterestRateModel(InterestRateModel newInterestRateModel) public returns (uint) {
         bytes memory data = delegateToImplementation(abi.encodeWithSignature("_setInterestRateModel(address)", newInterestRateModel));
         return abi.decode(data, (uint));
-    }
-
-    function _setMigration(address migration_) external {
-        bytes memory data = delegateToImplementation(abi.encodeWithSignature("_setMigration(address)", migration_));
     }
 
     /**

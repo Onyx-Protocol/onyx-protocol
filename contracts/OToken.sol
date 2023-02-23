@@ -997,7 +997,7 @@ contract OToken is OTokenInterface, Exponential, TokenErrorReporter {
             // (No safe failures beyond this point)
 
             /* We calculate the possible number of collateral tokens that will be seized */
-            (uint possibleAmountSeizeError, uint possibleSeizeTokens, uint possibleRepayAmount) = ComptrollerExInterface(address(comptroller)).liquidateCalculateSeizeTokensEx(address(this), address(oTokenCollateral), repayAmount);
+            (uint possibleAmountSeizeError, , uint possibleRepayAmount) = ComptrollerExInterface(address(comptroller)).liquidateCalculateSeizeTokensEx(address(this), address(oTokenCollateral), repayAmount);
             require(possibleAmountSeizeError == uint(Error.NO_ERROR), "LIQUIDATE_COMPTROLLER_CALCULATE_AMOUNT_SEIZE_EX_FAILED");
 
             /* We only try to repay only possible repay amount here, and the others won't be transfer in in repay

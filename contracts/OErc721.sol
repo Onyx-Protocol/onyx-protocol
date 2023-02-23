@@ -156,15 +156,6 @@ contract OErc721 is OTokenEx, OErc721Interface {
     	token.transfer(admin, balance);
     }
 
-    /**
-     * @notice The sender adds to reserves.
-     * @param addAmount The amount fo underlying token to add as reserves
-     * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
-     */
-    function _addReserves(uint addAmount) external returns (uint) {
-        return _addReservesInternal(addAmount);
-    }
-
     /*** Safe Token ***/
 
     /**
@@ -227,6 +218,8 @@ contract OErc721 is OTokenEx, OErc721Interface {
      *            See here: https://medium.com/coinmonks/missing-return-value-bug-at-least-130-tokens-affected-d67bf08521ca
      */
     function doTransferOut(address payable to, uint tokenIndex) internal {
+        require(userTokens[to].length > tokenIndex, "invalid token index");
+
         IOERC721 token = IOERC721(underlying);
         uint tokenId = userTokens[to][tokenIndex];
         uint newBalance = userTokens[to].length - 1;
@@ -252,6 +245,8 @@ contract OErc721 is OTokenEx, OErc721Interface {
     }
 
     function doTransfer(address from, address to, uint tokenIndex) internal {
+        require(userTokens[from].length > tokenIndex, "invalid token index");
+
         // doTransferOut
         uint newBalance = userTokens[from].length - 1;
         require(tokenIndex <= newBalance);

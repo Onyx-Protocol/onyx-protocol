@@ -31,6 +31,9 @@ contract OErc20Delegator is OTokenInterface, OErc20Interface, ODelegatorInterfac
                 address payable admin_,
                 address implementation_,
                 bytes memory becomeImplementationData) public {
+        require(admin_ != address(0), "invalid admin address");
+        require(implementation_ != address(0), "invalid implementation address");
+
         // Creator of the contract is admin during initialization
         admin = msg.sender;
 
@@ -58,6 +61,8 @@ contract OErc20Delegator is OTokenInterface, OErc20Interface, ODelegatorInterfac
      * @param becomeImplementationData The encoded bytes data to be passed to _becomeImplementation
      */
     function _setImplementation(address implementation_, bool allowResign, bytes memory becomeImplementationData) public {
+        require(implementation_ != address(0), "invalid implementation address");
+
         require(msg.sender == admin, "OErc20Delegator::_setImplementation: Caller must be admin");
 
         if (allowResign) {
