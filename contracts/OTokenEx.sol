@@ -674,11 +674,6 @@ contract OTokenEx is OTokenInterface, Exponential, TokenErrorReporter {
         totalSupply = vars.totalSupplyNew;
         accountTokens[redeemer] = vars.accountTokensNew;
 
-        if (totalSupply == 0 && totalBorrows > 0) {
-            totalReserves = totalReserves - totalBorrows;
-            totalBorrows = 0;
-        }
-
         /*
          * We invoke doTransferOut for the redeemer and the redeemAmount.
          *  Note: The oToken must handle variations between ERC-20 and ETH underlying.
@@ -1308,133 +1303,6 @@ contract OTokenEx is OTokenInterface, Exponential, TokenErrorReporter {
     }
 
     /**
-     * @notice Accrues interest and reduces reserves by transferring from msg.sender
-     * @param addAmount Amount of addition to reserves
-     * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
-     */
-    function _addReservesInternal(uint addAmount) internal nonReentrant returns (uint) {
-        uint error = accrueInterest();
-        if (error != uint(Error.NO_ERROR)) {
-            // accrueInterest emits logs on errors, but on top of that we want to log the fact that an attempted reduce reserves failed.
-            return fail(Error(error), FailureInfo.ADD_RESERVES_ACCRUE_INTEREST_FAILED);
-        }
-
-        // _addReservesFresh emits reserve-addition-specific logs on errors, so we don't need to.
-        (error, ) = _addReservesFresh(addAmount);
-        return error;
-    }
-
-    /**
-     * @notice Add reserves by transferring from caller
-     * @dev Requires fresh interest accrual
-     * @param addAmount Amount of addition to reserves
-     * @return (uint, uint) An error code (0=success, otherwise a failure (see ErrorReporter.sol for details)) and the actual amount added, net token fees
-     */
-    function _addReservesFresh(uint addAmount) internal returns (uint, uint) {
-        // totalReserves + actualAddAmount
-        uint totalReservesNew;
-        uint actualAddAmount;
-
-        // We fail gracefully unless market's block number equals current block number
-        if (accrualBlockNumber != getBlockNumber()) {
-            return (fail(Error.MARKET_NOT_FRESH, FailureInfo.ADD_RESERVES_FRESH_CHECK), actualAddAmount);
-        }
-
-        /////////////////////////
-        // EFFEOTS & INTERAOTIONS
-        // (No safe failures beyond this point)
-
-        /*
-         * We call doTransferIn for the caller and the addAmount
-         *  Note: The oToken must handle variations between ERC-20 and ETH underlying.
-         *  On success, the oToken holds an additional addAmount of cash.
-         *  doTransferIn reverts if anything goes wrong, since we can't be sure if side effects occurred.
-         *  it returns the amount actually transferred, in case of a fee.
-         */
-
-        actualAddAmount = doTransferIn(msg.sender, addAmount);
-
-        totalReservesNew = totalReserves + actualAddAmount;
-
-        /* Revert on overflow */
-        require(totalReservesNew >= totalReserves, "add reserves unexpected overflow");
-
-        // Store reserves[n+1] = reserves[n] + actualAddAmount
-        totalReserves = totalReservesNew;
-
-        /* Emit NewReserves(admin, actualAddAmount, reserves[n+1]) */
-        emit ReservesAdded(msg.sender, actualAddAmount, totalReservesNew);
-
-        /* Return (NO_ERROR, actualAddAmount) */
-        return (uint(Error.NO_ERROR), actualAddAmount);
-    }
-
-
-    /**
-     * @notice Accrues interest and reduces reserves by transferring to admin
-     * @param reduceAmount Amount of reduction to reserves
-     * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
-     */
-    function _reduceReserves(uint reduceAmount) external nonReentrant returns (uint) {
-        uint error = accrueInterest();
-        if (error != uint(Error.NO_ERROR)) {
-            // accrueInterest emits logs on errors, but on top of that we want to log the fact that an attempted reduce reserves failed.
-            return fail(Error(error), FailureInfo.REDUCE_RESERVES_ACCRUE_INTEREST_FAILED);
-        }
-        // _reduceReservesFresh emits reserve-reduction-specific logs on errors, so we don't need to.
-        return _reduceReservesFresh(reduceAmount);
-    }
-
-    /**
-     * @notice Reduces reserves by transferring to admin
-     * @dev Requires fresh interest accrual
-     * @param reduceAmount Amount of reduction to reserves
-     * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
-     */
-    function _reduceReservesFresh(uint reduceAmount) internal returns (uint) {
-        // totalReserves - reduceAmount
-        uint totalReservesNew;
-
-        // Check caller is admin
-        if (msg.sender != admin) {
-            return fail(Error.UNAUTHORIZED, FailureInfo.REDUCE_RESERVES_ADMIN_CHECK);
-        }
-
-        // We fail gracefully unless market's block number equals current block number
-        if (accrualBlockNumber != getBlockNumber()) {
-            return fail(Error.MARKET_NOT_FRESH, FailureInfo.REDUCE_RESERVES_FRESH_CHECK);
-        }
-
-        // Fail gracefully if protocol has insufficient underlying cash
-        if (getCashPrior() < reduceAmount) {
-            return fail(Error.TOKEN_INSUFFICIENT_CASH, FailureInfo.REDUCE_RESERVES_CASH_NOT_AVAILABLE);
-        }
-
-        // Check reduceAmount ≤ reserves[n] (totalReserves)
-        if (reduceAmount > totalReserves) {
-            return fail(Error.BAD_INPUT, FailureInfo.REDUCE_RESERVES_VALIDATION);
-        }
-
-        /////////////////////////
-        // EFFEOTS & INTERAOTIONS
-        // (No safe failures beyond this point)
-
-        totalReservesNew = totalReserves - reduceAmount;
-        // We checked reduceAmount <= totalReserves above, so this should never revert.
-        require(totalReservesNew <= totalReserves, "reduce reserves unexpected underflow");
-
-        // Store reserves[n+1] = reserves[n] - reduceAmount
-        totalReserves = totalReservesNew;
-
-        // doTransferOut reverts if anything goes wrong, since we can't be sure if side effects occurred.
-        doTransferOut(admin, reduceAmount);
-
-        emit ReservesReduced(admin, reduceAmount, totalReservesNew);
-
-        return uint(Error.NO_ERROR);
-    }
-
-    /**
      * @notice accrues interest and updates the interest rate model using _setInterestRateModelFresh
      * @dev Admin function to accrue interest and update the interest rate model
      * @param newInterestRateModel the new interest rate model to use
@@ -1520,5 +1388,10 @@ contract OTokenEx is OTokenInterface, Exponential, TokenErrorReporter {
         _notEntered = false;
         _;
         _notEntered = true; // get a gas-refund post-Istanbul
+    }
+
+    function _reduceReserves(uint reduceAmount) external nonReentrant returns (uint) {
+        reduceAmount;
+        return uint(Error.NO_ERROR);
     }
 }

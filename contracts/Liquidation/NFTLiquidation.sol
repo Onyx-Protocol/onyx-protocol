@@ -74,7 +74,9 @@ contract NFTLiquidation is NFTLiquidationV1Storage, NFTLiquidationInterface {
     /**
      * @notice Execute the proxy liquidation with single token repay and selected seize token value
      */
-    function liquidateWithSingleRepayV2(address payable borrower, address oTokenCollateral, address oTokenRepay, uint256 repayAmount, uint256[] calldata _seizeIndexes, bool claimOToken) external payable nonReentrant {
+    function liquidateWithSingleRepayV2(address payable borrower, address oTokenCollateral, address oTokenRepay, uint256 repayAmount, uint256[] calldata _seizeIndexes, bool claimOToken)
+        external payable nonReentrant
+    {
         require(borrower != address(0), "invalid borrower address");
 
         (, , uint256 borrowerShortfall) = IComptroller(comptroller).getAccountLiquidity(borrower);
@@ -258,7 +260,9 @@ contract NFTLiquidation is NFTLiquidationV1Storage, NFTLiquidationInterface {
         return vars.collateralValue.sub(vars.repayValue).div(getUnderlyingPrice(oTokenRepay));
     }
 
-    function getBaseTokenExtraRepayAmount(address payable borrower, address oTokenCollateral, address oTokenRepay1, uint256 repayAmount1, address oTokenRepay2, uint256 repayAmount2) public view returns(uint256) {
+    function getBaseTokenExtraRepayAmount(address payable borrower, address oTokenCollateral, address oTokenRepay1, uint256 repayAmount1, address oTokenRepay2, uint256 repayAmount2)
+        public view returns(uint256)
+    {
         uint256 liquidationIncentiveMantissa = IComptroller(comptroller).liquidationIncentiveMantissa();
 
         GetExtraRepayLocalVars memory vars;

@@ -686,6 +686,10 @@ contract OToken is OTokenInterface, Exponential, TokenErrorReporter {
         // EFFECTS & INTERACTIONS
         // (No safe failures beyond this point)
 
+        /* We write previously calculated values into storage */
+        totalSupply = vars.totalSupplyNew;
+        accountTokens[redeemer] = vars.accountTokensNew;
+
         /*
          * We invoke doTransferOut for the redeemer and the redeemAmount.
          *  Note: The oToken must handle variations between ERC-20 and ETH underlying.
@@ -693,10 +697,6 @@ contract OToken is OTokenInterface, Exponential, TokenErrorReporter {
          *  doTransferOut reverts if anything goes wrong, since we can't be sure if side effects occurred.
          */
         doTransferOut(redeemer, vars.redeemAmount);
-
-        /* We write previously calculated values into storage */
-        totalSupply = vars.totalSupplyNew;
-        accountTokens[redeemer] = vars.accountTokensNew;
 
         /* We emit a Transfer event, and a Redeem event */
         emit Transfer(redeemer, address(this), vars.redeemTokens);
@@ -778,6 +778,11 @@ contract OToken is OTokenInterface, Exponential, TokenErrorReporter {
         // EFFECTS & INTERACTIONS
         // (No safe failures beyond this point)
 
+        /* We write the previously calculated values into storage */
+        accountBorrows[borrower].principal = vars.accountBorrowsNew;
+        accountBorrows[borrower].interestIndex = borrowIndex;
+        totalBorrows = vars.totalBorrowsNew;
+
         /*
          * We invoke doTransferOut for the borrower and the borrowAmount.
          *  Note: The oToken must handle variations between ERC-20 and ETH underlying.
@@ -785,11 +790,6 @@ contract OToken is OTokenInterface, Exponential, TokenErrorReporter {
          *  doTransferOut reverts if anything goes wrong, since we can't be sure if side effects occurred.
          */
         doTransferOut(borrower, borrowAmount);
-
-        /* We write the previously calculated values into storage */
-        accountBorrows[borrower].principal = vars.accountBorrowsNew;
-        accountBorrows[borrower].interestIndex = borrowIndex;
-        totalBorrows = vars.totalBorrowsNew;
 
         /* We emit a Borrow event */
         emit Borrow(borrower, borrowAmount, vars.accountBorrowsNew, vars.totalBorrowsNew);
@@ -997,7 +997,7 @@ contract OToken is OTokenInterface, Exponential, TokenErrorReporter {
             // (No safe failures beyond this point)
 
             /* We calculate the possible number of collateral tokens that will be seized */
-            (uint possibleAmountSeizeError, uint possibleSeizeTokens, uint possibleRepayAmount) = ComptrollerExInterface(address(comptroller)).liquidateCalculateSeizeTokensEx(address(this), address(oTokenCollateral), repayAmount);
+            (uint possibleAmountSeizeError, , uint possibleRepayAmount) = ComptrollerExInterface(address(comptroller)).liquidateCalculateSeizeTokensEx(address(this), address(oTokenCollateral), repayAmount);
             require(possibleAmountSeizeError == uint(Error.NO_ERROR), "LIQUIDATE_COMPTROLLER_CALCULATE_AMOUNT_SEIZE_EX_FAILED");
 
             /* We only try to repay only possible repay amount here, and the others won't be transfer in in repay
