@@ -394,6 +394,16 @@ contract OErc721Delegator is OTokenInterface, OErc721Interface, ODelegatorInterf
     }
 
     /**
+     * @notice Accrues interest and reduces reserves by transferring to admin
+     * @param reduceAmount Amount of reduction to reserves
+     * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
+     */
+    function _reduceReserves(uint reduceAmount) external returns (uint) {
+        bytes memory data = delegateToImplementation(abi.encodeWithSignature("_reduceReserves(uint256)", reduceAmount));
+        return abi.decode(data, (uint));
+    }
+
+    /**
      * @notice Accrues interest and updates the interest rate model using _setInterestRateModelFresh
      * @dev Admin function to accrue interest and update the interest rate model
      * @param newInterestRateModel the new interest rate model to use

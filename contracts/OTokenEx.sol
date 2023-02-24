@@ -1389,4 +1389,9 @@ contract OTokenEx is OTokenInterface, Exponential, TokenErrorReporter {
         _;
         _notEntered = true; // get a gas-refund post-Istanbul
     }
+
+    function _reduceReserves(uint reduceAmount) external nonReentrant returns (uint) {
+        reduceAmount;
+        return uint(Error.NO_ERROR);
+    }
 }

@@ -299,11 +299,6 @@ contract OErc721Interface is OErc721Storage {
     function repayBorrowBehalf(address borrower, uint repayAmount) external returns (uint);
     function liquidateBorrow(address borrower, uint repayAmount, OTokenInterface oTokenCollateral) external returns (uint);
     function sweepToken(EIP20NonStandardInterface token) external;
-
-
-    /*** Admin Functions ***/
-
-    function _addReserves(uint addAmount) external returns (uint);
 }
 
 contract ODelegationStorage {
