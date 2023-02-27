@@ -760,11 +760,6 @@ contract OTokenEx is OTokenInterface, Exponential, TokenErrorReporter {
         totalSupply = vars.totalSupplyNew;
         accountTokens[redeemer] = vars.accountTokensNew;
 
-        if (totalSupply == 0 && totalBorrows > 0) {
-            totalReserves = totalReserves - totalBorrows;
-            totalBorrows = 0;
-        }
-
         /*
          * We invoke doTransferOut for the redeemer and the redeemAmount.
          *  Note: The oToken must handle variations between ERC-20 and ETH underlying.
