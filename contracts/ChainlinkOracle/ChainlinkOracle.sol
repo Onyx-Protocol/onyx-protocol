@@ -57,13 +57,16 @@ contract ChainlinkOracle {
             price = prices[address(token)];
         } else {
             price = getChainlinkPrice(getFeed(token.symbol()));
+
+            if (getETHBase(token.symbol())) {
+                AggregatorV2V3Interface baseFeed = getFeed("ETH");
+                price = getChainlinkPrice(baseFeed).mul(price).div(1e18);
+            }
         }
 
-        if (getETHBase(token.symbol())) {
-            AggregatorV2V3Interface baseFeed = getFeed("ETH");
+        if (oToken.decimals() == 0) {
             // we return nft price with 18 plus deciaml
-            price = getChainlinkPrice(baseFeed).mul(price);
-            return price;
+            return price.mul(10 ** 18);
         } else {
             uint decimalDelta = uint(18).sub(uint(token.decimals()));
             // Ensure that we don't multiply the result by 0
