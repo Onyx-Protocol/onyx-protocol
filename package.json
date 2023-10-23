@@ -20,13 +20,32 @@
   "author": "Onyx Finance",
   "license": "UNLICENSED",
   "devDependencies": {
+    "@nomicfoundation/hardhat-chai-matchers": "^2.0.0",
+    "@nomicfoundation/hardhat-ethers": "^3.0.0",
+    "@nomicfoundation/hardhat-network-helpers": "^1.0.0",
+    "@nomicfoundation/hardhat-toolbox": "^3.0.0",
+    "@nomicfoundation/hardhat-verify": "^1.0.0",
+    "@typechain/ethers-v6": "^0.4.0",
+    "@typechain/hardhat": "^8.0.0",
+    "@types/chai": "^4.2.0",
+    "@types/mocha": ">=9.1.0",
+    "@types/node": ">=16.0.0",
     "bignumber.js": "9.0.0",
+    "chai": "^4.2.0",
+    "ethers": "^6.4.0",
+    "hardhat": "^2.14.0",
+    "hardhat-gas-reporter": "^1.0.8",
     "jest-diff": "^26.4.2",
     "jest-junit": "^11.1.0",
+    "solidity-coverage": "^0.8.0",
     "solium": "^1.2.5",
-    "solparse": "^2.2.8"
+    "solparse": "^2.2.8",
+    "ts-node": ">=8.0.0",
+    "typechain": "^8.1.0",
+    "typescript": ">=4.5.0"
   },
   "dependencies": {
+    "dotenv": "^16.3.1",
     "eth-saddle": "^0.1.21"
   },
   "resolutions": {
