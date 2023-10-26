@@ -30,10 +30,11 @@
     "@types/chai": "^4.2.0",
     "@types/mocha": ">=9.1.0",
     "@types/node": ">=16.0.0",
+    "@types/readline-sync": "^1.4.6",
     "bignumber.js": "9.0.0",
     "chai": "^4.2.0",
     "ethers": "^6.4.0",
-    "hardhat": "^2.14.0",
+    "hardhat": "^2.18.3",
     "hardhat-gas-reporter": "^1.0.8",
     "jest-diff": "^26.4.2",
     "jest-junit": "^11.1.0",
@@ -46,7 +47,8 @@
   },
   "dependencies": {
     "dotenv": "^16.3.1",
-    "eth-saddle": "^0.1.21"
+    "eth-saddle": "^0.1.21",
+    "readline-sync": "^1.4.10"
   },
   "resolutions": {
     "scrypt.js": "https://registry.npmjs.org/@compound-finance/ethereumjs-wallet/-/ethereumjs-wallet-0.6.3.tgz",
