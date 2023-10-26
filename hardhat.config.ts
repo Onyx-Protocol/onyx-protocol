@@ -5,6 +5,9 @@ require("dotenv").config();
 
 const config: HardhatUserConfig = {
   solidity: "0.5.16",
+  etherscan: {
+    apiKey: process.env.ETHERSCAN_API_KEY,
+  },
   networks: {
     hardhat: {
       forking: {
