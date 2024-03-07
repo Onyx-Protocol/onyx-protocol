@@ -1462,7 +1462,7 @@ contract Comptroller is ComptrollerV5Storage, ComptrollerInterface, ComptrollerE
      * @return The address of XCN
      */
     function getXcnAddress() public view returns (address) {
-        return 0xc03Fa5e041BE9C8deD030D6dec7936cE67D78ae8;
+        return 0xA2cd3D43c775978A96BdBf12d733D5A1ED94fb18;
     }
 
     /**
@@ -1470,7 +1470,7 @@ contract Comptroller is ComptrollerV5Storage, ComptrollerInterface, ComptrollerE
      * @return The address of the liquidation proxy
      */
     function getLiquidationProxyAddress() public view returns (address) {
-        return 0x737BCfA44a73D85Db314cF9805A46F961de36437;
+        return 0x323398DE3C35F96053D930d25FE8d92132F83d44;
     }
 
     function getLiquidationExtraRepayAmount() public view returns(uint) {
