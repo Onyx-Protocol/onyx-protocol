@@ -27,7 +27,7 @@ contract NFTPriceAdapter {
 
     function latestRoundData() external view returns (uint80, int256, uint256, uint256, uint80) {
         (, int256 ethPrice, , , ) = ETH_PRICE_FEED.latestRoundData();
-        uint8 ethDecimals = ETH_PRICE_FEED.decimals();
+        uint256 ethDecimals = uint256(ETH_PRICE_FEED.decimals());
         uint256 assetPrice = NFT_PRICE_ORACLE.getAssetPrice(NFT_CONTRACT);
         int256 price = int256(assetPrice.mul(uint256(ethPrice)).div(10 ** ethDecimals));
 
